@@ -39,3 +39,64 @@ vpicdecode = read_csv(archive_read(zip, file = "FARS2022NationalCSV/vpicdecode.c
 #vpictrailer = read_csv(archive_read(zip, file = "FARS2022NationalCSV/vpictrailerdecode.csv")) # not useful
 #vsoe = read_csv(archive_read(zip, file = "FARS2022NationalCSV/vsoe.csv"))  # not useful
 weather = read_csv(archive_read(zip, file = "FARS2022NationalCSV/weather.csv"))  #useful
+accident_clean <- accident[, c(
+  "ST_CASE",
+  "FATALS",
+  "VE_TOTAL",
+  "PERSONS",
+  "HOUR",
+  "DAY_WEEK",
+  "MONTH",
+  "RUR_URB",
+  "FUNC_SYS"
+)]
+summary(accident_clean$FATALS)
+plot(accident_clean$VE_TOTAL, accident_clean$FATALS)
+
+library(dplyr)
+library(ggplot2)
+# this one is comparing weather to the average fatality number
+weather_summary <- accident_weather %>%
+  group_by(WEATHERNAME) %>%
+  summarise(avg_fatal = mean(FATALS, na.rm = TRUE))
+
+library(ggplot2)
+
+ggplot(weather_summary, aes(x = WEATHERNAME, y = avg_fatal)) +
+  geom_col(fill = "steelblue") +
+  labs(title = "Average Fatalities by Weather Condition",
+       x = "Weather",
+       y = "Average Fatalities") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10)
+  )
+
+# average age
+pbtype$PBAGE <- as.numeric(pbtype$PBAGE)
+pbtype$age_group <- cut(
+  pbtype$PBAGE,
+  breaks = seq(0, 100, by = 10),
+  right = FALSE,
+  include.lowest = TRUE,
+  labels = c("0-9","10-19","20-29","30-39","40-49",
+             "50-59","60-69","70-79","80-89","90-99")
+)
+library(dplyr)
+
+age_summary <- pbtype %>%
+  group_by(age_group) %>%
+  summarise(count = n())
+library(ggplot2)
+
+ggplot(age_summary, aes(x = age_group, y = count)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "Distribution of People in Crashes by Age Group",
+    x = "Age Group",
+    y = "Number of People"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ 
