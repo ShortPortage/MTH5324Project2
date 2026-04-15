@@ -6,12 +6,28 @@ library(ggplot2)
 # Responses: Fatal accident indicator, number of vehicles
 # Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
 
+# DATA HIERARCHY:
+# accident 1
+# | vehicle 1
+#   | Person 1
+#   | Person 2
+#   | ...
+# | vehicle 2
+#   | Person 1
+# | vehicle 3
+#   | Person 1
+#   | Person 2
+#   | Person 3
+# | ...
+# accident 2
+# |...
+
 # Load .csv files
 zip = "./data/data.zip"
 accident = read_csv(archive_read(zip, file = "FARS2022NationalCSV/accident.csv")) # useful  
 #cevent = read_csv(archive_read(zip, file = "FARS2022NationalCSV/cevent.csv"))     # not useful, lists how it happened
 #crashrf = read_csv(archive_read(zip, file = "FARS2022NationalCSV/crashrf.csv"))   # not useful
-damage = read_csv(archive_read(zip, file = "FARS2022NationalCSV/damage.csv"))     # useful, gives number of vehicles
+#damage = read_csv(archive_read(zip, file = "FARS2022NationalCSV/damage.csv"))     # not useful, gives number of vehicles
 #distract = read_csv(archive_read(zip, file = "FARS2022NationalCSV/distract.csv")) # not useful, gives if distracted driver
 drimpair = read_csv(archive_read(zip, file = "FARS2022NationalCSV/drimpair.csv")) # useful, alcohol/drugs
 driverrf = read_csv(archive_read(zip, file = "FARS2022NationalCSV/driverrf.csv")) # useful - indicates the drivers fault 
@@ -52,8 +68,31 @@ accident_clean <- accident[, c(
   "DAY_WEEK",
   "MONTH",
   "RUR_URB",
-  "FUNC_SYS"
+  "ROUTE",
+  "FUNC_SYS",
+  "LGT_COND",
+  "LATITUDE",
+  "LONGITUD",
+  "WEATHER"
 )]
+
+# Get vehicle number and travel speed
+vehicle_clean = vehicle[, c(
+  "ST_CASE",
+  "VEH_NO",
+  "TRAV_SP"
+)] 
+
+# Select only drivers (this is what PER_TYP == 1 is doing)
+person_clean = person[person$PER_TYP == 1, c(
+  "ST_CASE", 
+  "VEH_NO", 
+  "AGE", 
+  "DRINKING"
+)]
+
+driver_vehicle = inner_join(person_clean, vehicle_clean, by = c("ST_CASE", "VEH_NO"))
+data_joined = inner_join(driver_vehicle, accident_clean, by = c("ST_CASE"))
 
 summary(accident_clean$FATALS)
 plot(accident_clean$VE_TOTAL, accident_clean$FATALS)
@@ -137,5 +176,3 @@ ggplot(age_summary, aes(x = age_group, y = count)) +
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
- 
