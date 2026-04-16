@@ -2,6 +2,7 @@ library(archive)
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(forcats)
 
 # Responses: Fatal accident indicator, number of vehicles
 # Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
@@ -94,6 +95,18 @@ person_clean = person[person$PER_TYP == 1, c(
 driver_vehicle = inner_join(person_clean, vehicle_clean, by = c("ST_CASE", "VEH_NO"))
 data_joined = inner_join(driver_vehicle, accident_clean, by = c("ST_CASE"))
 
+data_filtered_trimmed <- data_joined %>%
+  filter(
+    TRAV_SP < 140,        # filter out speeds that aren't real
+    AGE < 100,            # Filter out age codes 
+    DRINKING %in% c(0, 1) # 1 = Yes, 0 = No or 9 is often unknown
+  ) %>%
+  mutate(
+    DRINKING = factor(DRINKING, labels = c("No Alcohol", "Alcohol Involved")),
+    LGT_COND = factor(LGT_COND, labels = c("Daylight", "Dark-Not Lit", "Dark-Lit", 
+                                           "Dawn", "Dusk", "Dark-Unknown", "Other", "Unknown")[1:n_distinct(LGT_COND)])
+  )
+
 summary(accident_clean$FATALS)
 plot(accident_clean$VE_TOTAL, accident_clean$FATALS)
 
@@ -176,3 +189,40 @@ ggplot(age_summary, aes(x = age_group, y = count)) +
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Responses: Fatal accident indicator, number of vehicles
+# Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
+
+# Speed vs. Number of Fatalities
+ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS)) +
+  geom_jitter(alpha = 0.1, color = "steelblue") + # jitter helps with overlapping points
+  geom_smooth(method = "gam", color = "red") +
+  labs(title = "Travel Speed vs. Number of Fatalities", x = "Travel Speed (MPH)", y = "Fatalities")
+
+# Age vs. Number of Vehicles Involved
+ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
+  geom_jitter(alpha = 0.1, color = "steelblue") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Driver Age vs. Total Vehicles Involved", x = "Driver Age", y = "Total Vehicles")
+
+# Alcohol vs. Fatalities (Boxplot)
+ggplot(data_filtered_trimmed, aes(x = DRINKING, y = FATALS, fill = DRINKING)) +
+  geom_boxplot() +
+  labs(title = "Effect of Alcohol on Fatality Count", y = "Number of Fatalities") +
+  theme_minimal()
+
+# Lighting Condition vs. Total Vehicles (Mean Comparison)
+data_filtered_trimmed %>%
+  group_by(LGT_COND) %>%
+  summarise(mean_ve = mean(VE_TOTAL, na.rm = TRUE)) %>%
+  ggplot(aes(x = reorder(LGT_COND, -mean_ve), y = mean_ve)) +
+  geom_col(fill = "blue") +
+  labs(title = "Average Vehicles Involved by Lighting Condition", x = "Light Condition", y = "Avg Vehicles") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Interaction of Speed and Alcohol on Fatalities
+ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS, color = DRINKING)) +
+  geom_smooth(se = FALSE) +
+  labs(title = "Fatality Trend: Speed vs. Alcohol Interaction", 
+       x = "Travel Speed", y = "Expected Fatalities") +
+  theme_minimal()
