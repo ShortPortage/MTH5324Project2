@@ -226,3 +226,60 @@ ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS, color = DRINKING)) +
   labs(title = "Fatality Trend: Speed vs. Alcohol Interaction", 
        x = "Travel Speed", y = "Expected Fatalities") +
   theme_minimal()
+# Create accident-level alcohol indicator
+accident_alcohol <- data_filtered_trimmed %>%
+  group_by(ST_CASE) %>%
+  summarise(
+    alcohol_involved = any(DRINKING == "Alcohol Involved")
+  ) %>%
+  mutate(
+    alcohol_involved = factor(alcohol_involved,
+                              labels = c("No Alcohol", "Alcohol Involved"))
+  )
+
+# Count accidents
+accident_counts <- accident_alcohol %>%
+  group_by(alcohol_involved) %>%
+  summarise(count = n())
+
+# Plot
+ggplot(accident_counts, aes(x = alcohol_involved, y = count, fill = alcohol_involved)) +
+  geom_col() +
+  labs(
+    title = "Number of Accidents: Alcohol vs No Alcohol",
+    x = "Alcohol Involvement",
+    y = "Number of Accidents"
+  ) +
+  theme_minimal()
+# Keep only drivers and valid sex values
+driver_sex <- person %>%
+  filter(PER_TYP == 1, SEXNAME %in% c("Male", "Female")) %>%
+  select(ST_CASE, SEXNAME)
+
+# Collapse to accident level
+accident_sex <- driver_sex %>%
+  group_by(ST_CASE) %>%
+  summarise(
+    male_involved = any(SEXNAME == "Male"),
+    female_involved = any(SEXNAME == "Female")
+  )
+
+# Convert to long format for counting
+accident_counts <- accident_sex %>%
+  summarise(
+    Male = sum(male_involved),
+    Female = sum(female_involved)
+  ) %>%
+  tidyr::pivot_longer(cols = everything(),
+                      names_to = "Sex",
+                      values_to = "count")
+
+# Plot
+ggplot(accident_counts, aes(x = Sex, y = count, fill = Sex)) +
+  geom_col() +
+  labs(
+    title = "Number of Accidents Involving Male vs Female Drivers",
+    x = "Driver Sex",
+    y = "Number of Accidents"
+  ) +
+  theme_minimal()
