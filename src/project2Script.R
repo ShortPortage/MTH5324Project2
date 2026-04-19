@@ -198,7 +198,15 @@ ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS)) +
   geom_jitter(alpha = 0.1, color = "steelblue") + # jitter helps with overlapping points
   geom_smooth(method = "gam", color = "red") +
   labs(title = "Travel Speed vs. Number of Fatalities", x = "Travel Speed (MPH)", y = "Fatalities")
-
+ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = VE_TOTAL)) +
+  geom_jitter(alpha = 0.2, color = "steelblue") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(
+    title = "Speed vs Number of Vehicles Involved",
+    x = "Travel Speed (MPH)",
+    y = "Number of Vehicles"
+  ) +
+  theme_minimal()
 # Age vs. Number of Vehicles Involved
 ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
   geom_jitter(alpha = 0.1, color = "steelblue") +
