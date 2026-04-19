@@ -287,3 +287,27 @@ ggplot(accident_counts, aes(x = Sex, y = count, fill = Sex)) +
     y = "Number of Accidents"
   ) +
   theme_minimal()
+
+
+# 1. Create the grouping variable
+day_comparison <- accident_clean %>%
+  mutate(day_group = ifelse(DAY_WEEK %in% c(6, 7, 1), "Fri-Sun", "Mon-Thu")) %>%
+  group_by(day_group) %>%
+  summarise(
+    mean_fatalities = mean(FATALS, na.rm = TRUE),
+    total_accidents = n(),
+    .groups = "drop"
+  )
+
+# 2. Plot the comparison
+ggplot(day_comparison, aes(x = day_group, y = mean_fatalities, fill = day_group)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = round(mean_fatalities, 4)), vjust = -0.5, size = 5) +
+  scale_fill_manual(values = c("Fri-Sun" = "#e41a1c", "Mon-Thu" = "#377eb8")) +
+  labs(
+    title = "Mean Fatalities per Accident: Fri-Sun vs. Mon-Thu",
+    subtitle = "Based on 2022 FARS Data",
+    x = "Days of the Week",
+    y = "Average Fatalities per Accident"
+  ) +
+  theme_minimal()
