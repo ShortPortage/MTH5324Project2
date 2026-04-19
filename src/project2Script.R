@@ -3,7 +3,7 @@ library(readr)
 library(dplyr)
 library(ggplot2)
 library(forcats)
-
+library(olsrr)
 # Responses: Fatal accident indicator, number of vehicles
 # Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
 
@@ -301,7 +301,7 @@ ggplot(accident_counts, aes(x = Sex, y = count, fill = Sex)) +
   theme_minimal()
 
 
-# 1. Create the grouping variable
+
 day_comparison <- accident_clean %>%
   mutate(day_group = ifelse(DAY_WEEK %in% c(6, 7, 1), "Fri-Sun", "Mon-Thu")) %>%
   group_by(day_group) %>%
@@ -311,7 +311,7 @@ day_comparison <- accident_clean %>%
     .groups = "drop"
   )
 
-# 2. Plot the comparison
+
 ggplot(day_comparison, aes(x = day_group, y = mean_fatalities, fill = day_group)) +
   geom_col(width = 0.6) +
   geom_text(aes(label = round(mean_fatalities, 4)), vjust = -0.5, size = 5) +
@@ -350,7 +350,7 @@ road_labels <- c(
   "Local"
 )
 
-# 2. Summarize the data
+
 road_type_comparison <- accident_clean %>%
   filter(FUNC_SYS >= 1 & FUNC_SYS <= 7) %>%
   mutate(Road_Type = factor(FUNC_SYS, labels = road_labels)) %>%
@@ -360,7 +360,7 @@ road_type_comparison <- accident_clean %>%
     .groups = "drop"
   )
 
-# 3. Plot the results with vertical bars
+
 ggplot(road_type_comparison, aes(x = reorder(Road_Type, -avg_fatalities), y = avg_fatalities, fill = Road_Type)) +
   geom_col() +
   # Removed coord_flip() to make bars vertical
@@ -400,7 +400,7 @@ ggplot(road_vehicle_summary,
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-# 1. Create the grouping and summarize the vehicle counts
+
 vehicle_day_comparison <- accident_clean %>%
   # Categorize 1 (Sun), 6 (Fri), 7 (Sat) as Fri-Sun
   mutate(day_group = ifelse(DAY_WEEK %in% c(6, 7, 1), "Fri-Sun", "Mon-Thu")) %>%
@@ -410,7 +410,7 @@ vehicle_day_comparison <- accident_clean %>%
     .groups = "drop"
   )
 
-# 2. Create the vertical bar plot
+
 ggplot(vehicle_day_comparison, aes(x = day_group, y = avg_vehicles, fill = day_group)) +
   geom_col(width = 0.5) +
   # Adding text labels on top of the bars for clarity
