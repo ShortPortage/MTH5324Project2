@@ -205,10 +205,14 @@ ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
   geom_smooth(method = "lm", color = "red") +
   labs(title = "Driver Age vs. Total Vehicles Involved", x = "Driver Age", y = "Total Vehicles")
 
-# Alcohol vs. Fatalities (Boxplot)
-ggplot(data_filtered_trimmed, aes(x = DRINKING, y = FATALS, fill = DRINKING)) +
-  geom_boxplot() +
-  labs(title = "Effect of Alcohol on Fatality Count", y = "Number of Fatalities") +
+# Alcohol vs. Fatalities
+data_filtered_trimmed %>%
+  group_by(DRINKING) %>%
+  summarise(mean_fatalities = mean(FATALS, na.rm = TRUE)) %>%
+  ggplot(aes(x = DRINKING, y = mean_fatalities, fill = DRINKING)) +
+  geom_col() +
+  labs(title = "Mean Fatalities: Alcohol vs. No Alcohol",
+       y = "Average Number of Fatalities") +
   theme_minimal()
 
 # Lighting Condition vs. Total Vehicles (Mean Comparison)
