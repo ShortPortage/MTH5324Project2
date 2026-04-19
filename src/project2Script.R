@@ -424,3 +424,48 @@ ggplot(vehicle_day_comparison, aes(x = day_group, y = avg_vehicles, fill = day_g
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+
+ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
+  # Jitter adds a small amount of random noise to help see density
+  geom_jitter(alpha = 0.1, color = "steelblue", width = 0.5, height = 0.5) +
+  # Add a smooth trend line
+  geom_smooth(method = "gam", color = "darkred", size = 1.2) +
+  labs(
+    title = "Driver Age vs. Total Vehicles Involved",
+    subtitle = "Trend line shows how accident complexity changes with age",
+    x = "Driver Age",
+    y = "Total Vehicles"
+  ) +
+  theme_minimal()
+
+# 1. Summarize the data by location type
+loc_vehicle_comparison <- accident_clean %>%
+  filter(RUR_URB %in% c(1, 2)) %>%
+  mutate(Location = factor(RUR_URB, labels = c("Rural", "Urban"))) %>%
+  group_by(Location) %>%
+  summarise(
+    avg_vehicles = mean(VE_TOTAL, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 2. Plot with vertical bars
+ggplot(loc_vehicle_comparison, aes(x = Location, y = avg_vehicles, fill = Location)) +
+  geom_col(width = 0.5) +
+  geom_text(aes(label = round(avg_vehicles, 3)), vjust = -0.5, fontface = "bold") +
+  scale_fill_manual(values = c("Rural" = "#238b45", "Urban" = "#2171b5")) +
+  labs(
+    title = "Average Vehicles Involved: Rural vs. Urban",
+    x = "Location Type",
+    y = "Average Vehicles per Accident"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Responses: Fatal accident indicator, number of vehicles
+# Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
+
+# Responses: Fatal accident indicator, number of vehicles
+# Predictors: , , lighting, , , driver age, , 
+
+# Response: Fatalities
+# Relevant Predictors: Speed, road type, location (urban vs rural), time (weak), alcohol, weather
