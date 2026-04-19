@@ -125,20 +125,24 @@ ggplot(accident_weather, aes(x = WEATHERNAME, y = avg_fatal)) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, size = 10)
   )
-
-#weather_summary <- accident_weather %>%
-#  group_by(WEATHERNAME) %>%
-#  summarise(avg_fatal = mean(FATALS, na.rm = TRUE))
-
-#ggplot(weather_summary, aes(x = WEATHERNAME, y = avg_fatal)) +
-#  geom_col(fill = "steelblue") +
-#  labs(title = "Average Fatalities by Weather Condition",
-#       x = "Weather",
-#       y = "Average Fatalities") +
-#  theme_minimal() +
-#  theme(
-#    axis.text.x = element_text(angle = 45, hjust = 1, size = 10)
-#  )
+accident_weather_vehicles <- accident_clean %>%
+  left_join(weather, by = "ST_CASE") %>%
+  group_by(WEATHERNAME) %>%
+  summarise(
+    avg_vehicles = mean(VE_TOTAL, na.rm = TRUE),
+    .groups = "drop"
+  )
+ggplot(accident_weather_vehicles, aes(x = WEATHERNAME, y = avg_vehicles)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "Average Number of Vehicles Involved by Weather Condition",
+    x = "Weather Condition",
+    y = "Average Number of Vehicles"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10)
+  )
 
 # average age pedestrian
 pbtype$PBAGE <- as.numeric(pbtype$PBAGE)
