@@ -399,3 +399,28 @@ ggplot(road_vehicle_summary,
     legend.position = "none",
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+
+# 1. Create the grouping and summarize the vehicle counts
+vehicle_day_comparison <- accident_clean %>%
+  # Categorize 1 (Sun), 6 (Fri), 7 (Sat) as Fri-Sun
+  mutate(day_group = ifelse(DAY_WEEK %in% c(6, 7, 1), "Fri-Sun", "Mon-Thu")) %>%
+  group_by(day_group) %>%
+  summarise(
+    avg_vehicles = mean(VE_TOTAL, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 2. Create the vertical bar plot
+ggplot(vehicle_day_comparison, aes(x = day_group, y = avg_vehicles, fill = day_group)) +
+  geom_col(width = 0.5) +
+  # Adding text labels on top of the bars for clarity
+  geom_text(aes(label = round(avg_vehicles, 3)), vjust = -0.5, fontface = "bold") +
+  scale_fill_manual(values = c("Fri-Sun" = "#feb24c", "Mon-Thu" = "#756bb1")) +
+  labs(
+    title = "Average Number of Vehicles Involved: Fri-Sun vs. Mon-Thu",
+    subtitle = "Comparing multi-vehicle involvement across the week",
+    x = "Days of the Week",
+    y = "Average Vehicles per Accident"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
