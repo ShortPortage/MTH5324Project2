@@ -311,3 +311,18 @@ ggplot(day_comparison, aes(x = day_group, y = mean_fatalities, fill = day_group)
     y = "Average Fatalities per Accident"
   ) +
   theme_minimal()
+data_filtered_trimmed %>%
+  mutate(AREA = factor(RUR_URB,
+                       levels = c(1, 2),
+                       labels = c("Rural", "Urban"))) %>%
+  group_by(AREA) %>%
+  summarise(mean_fatalities = mean(FATALS, na.rm = TRUE)) %>%
+  ggplot(aes(x = AREA, y = mean_fatalities, fill = AREA)) +
+  geom_col(width = 0.6) +
+  labs(
+    title = "Average Fatalities: Urban vs Rural",
+    x = "Area Type",
+    y = "Average Number of Fatalities"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
