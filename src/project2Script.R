@@ -326,3 +326,40 @@ data_filtered_trimmed %>%
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+
+# 1. Define labels for the Functional System
+road_labels <- c(
+  "Interstate", 
+  "Arterial-Freeway", 
+  "Arterial-Other", 
+  "Minor Arterial", 
+  "Major Collector", 
+  "Minor Collector", 
+  "Local"
+)
+
+# 2. Summarize the data
+road_type_comparison <- accident_clean %>%
+  filter(FUNC_SYS >= 1 & FUNC_SYS <= 7) %>%
+  mutate(Road_Type = factor(FUNC_SYS, labels = road_labels)) %>%
+  group_by(Road_Type) %>%
+  summarise(
+    avg_fatalities = mean(FATALS, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 3. Plot the results with vertical bars
+ggplot(road_type_comparison, aes(x = reorder(Road_Type, -avg_fatalities), y = avg_fatalities, fill = Road_Type)) +
+  geom_col() +
+  # Removed coord_flip() to make bars vertical
+  labs(
+    title = "Average Fatalities by Road Type",
+    x = "Road Classification",
+    y = "Average Fatalities per Accident"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    # Rotate x-axis labels so they don't overlap
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
