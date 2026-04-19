@@ -461,11 +461,64 @@ ggplot(loc_vehicle_comparison, aes(x = Location, y = avg_vehicles, fill = Locati
   theme_minimal() +
   theme(legend.position = "none")
 
+# 1. Summarize fatalities by Lighting Condition
+lighting_summary <- data_filtered_trimmed %>%
+  filter(LGT_COND %in% c("Daylight", "Dark-Not Lit", "Dark-Lit", "Dawn", "Dusk")) %>%
+  group_by(LGT_COND) %>%
+  summarise(avg_fatalities = mean(FATALS, na.rm = TRUE))
+
+# 2. Plot vertical bars
+ggplot(lighting_summary, aes(x = reorder(LGT_COND, -avg_fatalities), y = avg_fatalities, fill = LGT_COND)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = round(avg_fatalities, 3)), vjust = -0.5, fontface = "bold") +
+  labs(
+    title = "Average Fatalities by Lighting Condition",
+    x = "Lighting Condition",
+    y = "Average Fatalities per Accident"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+# Plotting Driver Age vs. Fatalities
+ggplot(data_filtered_trimmed, aes(x = AGE, y = FATALS)) +
+  # Jitter adds small random noise to points so you can see the 'clouds' of data
+  geom_jitter(alpha = 0.15, color = "steelblue", width = 0.5, height = 0.2) +
+  # Adding a trend line to see if fatalities increase/decrease with age
+  geom_smooth(method = "gam", color = "darkred") +
+  labs(
+    title = "Driver Age vs. Total Fatalities in Accident",
+    subtitle = "Each point represents one accident; darker areas indicate higher frequency",
+    x = "Driver Age",
+    y = "Number of Fatalities"
+  ) +
+  theme_minimal()
+
+# Alcohol vs. Number of Vehicles Involved (Mean Comparison)
+data_filtered_trimmed %>%
+  group_by(DRINKING) %>%
+  summarise(mean_vehicles = mean(VE_TOTAL, na.rm = TRUE), .groups = "drop") %>%
+  ggplot(aes(x = DRINKING, y = mean_vehicles, fill = DRINKING)) +
+  geom_col(width = 0.5) +
+  geom_text(aes(label = round(mean_vehicles, 3)), vjust = -0.5, fontface = "bold") +
+  labs(
+    title = "Average Number of Vehicles Involved: Alcohol vs. No Alcohol",
+    subtitle = "Analysis of crash complexity based on driver drinking status",
+    x = "Drinking Status",
+    y = "Average Number of Vehicles"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
 # Responses: Fatal accident indicator, number of vehicles
 # Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
 
-# Responses: Fatal accident indicator, number of vehicles
-# Predictors: , , lighting, , , driver age, , 
-
 # Response: Fatalities
-# Relevant Predictors: Speed, road type, location (urban vs rural), time (weak), alcohol, weather
+# Relevant Predictors: Speed, road type, location (urban vs rural), alcohol (somewhat weak but important), weather, lighting, age
+# Weak Predictors: time (weak)
+
+# Response: Number of vehicles
+# Predictors: Location(urban vs rural), road type, lighting, speed, weather, time, alcohol
+# Weak Predictors: Age
