@@ -375,3 +375,27 @@ ggplot(road_type_comparison, aes(x = reorder(Road_Type, -avg_fatalities), y = av
     # Rotate x-axis labels so they don't overlap
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+road_vehicle_summary <- accident_clean %>%
+  filter(FUNC_SYS >= 1 & FUNC_SYS <= 7) %>%
+  mutate(Road_Type = factor(FUNC_SYS, labels = road_labels)) %>%
+  group_by(Road_Type) %>%
+  summarise(
+    avg_vehicles = mean(VE_TOTAL, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(road_vehicle_summary,
+       aes(x = reorder(Road_Type, -avg_vehicles),
+           y = avg_vehicles,
+           fill = Road_Type)) +
+  geom_col() +
+  labs(
+    title = "Average Number of Vehicles Involved by Road Type",
+    x = "Road Type",
+    y = "Average Number of Vehicles"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
