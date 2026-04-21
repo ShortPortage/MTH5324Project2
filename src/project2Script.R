@@ -4,6 +4,9 @@ library(dplyr)
 library(ggplot2)
 library(forcats)
 library(olsrr)
+library(MASS)
+library(splines)
+library(ggeffects)
 # Responses: Fatal accident indicator, number of vehicles
 # Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
 
@@ -104,7 +107,11 @@ data_filtered_trimmed <- data_joined %>%
   mutate(
     DRINKING = factor(DRINKING, labels = c("No Alcohol", "Alcohol Involved")),
     LGT_COND = factor(LGT_COND, labels = c("Daylight", "Dark-Not Lit", "Dark-Lit", 
-                                           "Dawn", "Dusk", "Dark-Unknown", "Other", "Unknown")[1:n_distinct(LGT_COND)])
+                                           "Dawn", "Dusk", "Dark-Unknown", "Other", "Unknown")[1:n_distinct(LGT_COND)]),
+    FUNC_SYS = as.factor(FUNC_SYS),
+    RUR_URB = as.factor(RUR_URB),
+    WEATHER = as.factor(WEATHER),
+    DAY_WEEK = as.factor(DAY_WEEK)
   )
 
 summary(accident_clean$FATALS)
@@ -270,7 +277,7 @@ ggplot(accident_counts, aes(x = alcohol_involved, y = count, fill = alcohol_invo
 # Keep only drivers and valid sex values
 driver_sex <- person %>%
   filter(PER_TYP == 1, SEXNAME %in% c("Male", "Female")) %>%
-  select(ST_CASE, SEXNAME)
+  dplyr::select(ST_CASE, SEXNAME)
 
 # Collapse to accident level
 accident_sex <- driver_sex %>%
@@ -410,7 +417,6 @@ vehicle_day_comparison <- accident_clean %>%
     .groups = "drop"
   )
 
-
 ggplot(vehicle_day_comparison, aes(x = day_group, y = avg_vehicles, fill = day_group)) +
   geom_col(width = 0.5) +
   # Adding text labels on top of the bars for clarity
@@ -522,3 +528,128 @@ data_filtered_trimmed %>%
 # Response: Number of vehicles
 # Predictors: Location(urban vs rural), road type, lighting, speed, weather, time, alcohol
 # Weak Predictors: Age
+
+# Setup poisson model for fatalities
+glm_fatals_full <- glm(
+  FATALS ~ ns(TRAV_SP, df=2) + FUNC_SYS + RUR_URB + DRINKING + WEATHER + LGT_COND + AGE, 
+  data = data_filtered_trimmed, 
+  family = "poisson"
+)
+
+# Stepwise selection
+best_glm_fatals <- stepAIC(glm_fatals_full, direction = "both", trace = FALSE)
+
+# Summary
+summary(best_glm_fatals)
+
+# Step AIC doesn't work with quasipoisson but we need it to correct underdispersion.
+# We now use the full model here
+
+glm_fatals_v2 <- glm(
+  FATALS ~ ns(TRAV_SP, df = 2) + FUNC_SYS + RUR_URB + DRINKING + WEATHER + LGT_COND + AGE,
+  data = data_filtered_trimmed,
+  family = quasipoisson(link = "log")
+)
+
+# New summary
+summary(glm_fatals_v2)
+
+# Lighting has high p-values and drinking has a tiny coefficient. So we can remove them
+
+# Create the new grouped weather variable and filter out unknown codes
+data_filtered_trimmed <- data_filtered_trimmed %>%
+  filter(
+    !FUNC_SYS %in% c("96", "98", "99"), # Included 99 just in case it exists as "Unknown"
+    !RUR_URB %in% c("6", "8", "9")      # Included 8 just in case it exists as "Not Reported"
+  ) %>%
+  mutate(
+    FUNC_SYS = droplevels(FUNC_SYS),
+    RUR_URB = droplevels(RUR_URB),
+    WEATHER_GROUPED = case_when(
+      WEATHER == "1" ~ "Clear",
+      WEATHER == "4" ~ "Condition 4 (Snow/Sleet)",
+      WEATHER == "7" ~ "Condition 7 (Severe Winds/Sand)",
+      TRUE ~ "Other Non-Clear" # This catches everything else
+    ),
+    WEATHER_GROUPED = relevel(as.factor(WEATHER_GROUPED), ref = "Clear") # Clear set as baseline
+  )
+
+# Create new model without lighting or drinking and the new weather data
+glm_fatals_v3 <- glm(
+  FATALS ~ ns(TRAV_SP, df = 2) + FUNC_SYS + RUR_URB + WEATHER_GROUPED + AGE, 
+  data = data_filtered_trimmed, 
+  family = quasipoisson(link = "log")
+)
+
+# View the final summary
+summary(glm_fatals_v3)
+
+# Plotting for fatalities marginal effects
+speed_effect <- ggpredict(glm_fatals_v3, terms = "TRAV_SP [all]") 
+plot(speed_effect) +
+  labs(
+    title = "Predicted Fatalities by Speed",
+    x = "Travel Speed (MPH)",
+    y = "Predicted Number of Fatalities"
+  ) +
+  theme_minimal()
+
+# 2. Visualize the Effect of Road Type
+road_effect <- ggpredict(glm_fatals_v3, terms = "FUNC_SYS")
+
+# 1. Convert the ggeffects object into a standard R data frame
+road_df <- as.data.frame(road_effect)
+
+# 2. Build the plot manually using native ggplot2
+ggplot(road_df, aes(x = x, y = predicted)) +
+  geom_point(size = 2.5, color = "black") +
+  # Add the confidence intervals as error bars
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  # Now scale_x_discrete will work perfectly
+  scale_x_discrete(labels = road_labels) +
+  labs(
+    title = "Predicted Fatalities by Road Type",
+    x = "Road Classification",
+    y = "Predicted Fatalities"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+# 3. Visualize the Effect of Extreme Weather
+weather_effect <- ggpredict(glm_fatals_v3, terms = "WEATHER_GROUPED")
+
+# Convert the ggeffects object into a standard R data frame
+weather_df <- as.data.frame(weather_effect)
+
+# Build the plot manually using native ggplot2
+ggplot(weather_df, aes(x = x, y = predicted)) +
+  geom_point(size = 2.5, color = "black") +
+  # width = 0.1 makes the horizontal caps on the error bars match the road plot
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.1, color = "black") +
+  labs(
+    title = "Predicted Fatalities by Weather Condition",
+    x = "Weather",
+    y = "Predicted Fatalities"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+# Now do number of vehicles:
+# 1. Build the full Poisson model for Vehicles
+glm_vehicles_full <- glm(
+  VE_TOTAL ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + LGT_COND + 
+    WEATHER_GROUPED + HOUR + DAY_WEEK + DRINKING, 
+  data = data_filtered_trimmed, 
+  family = "poisson"
+)
+
+# 2. Run Stepwise AIC to strip out the non-significant variables
+# trace = FALSE keeps the console output clean
+best_glm_vehicles <- stepAIC(glm_vehicles_full, direction = "both", trace = FALSE)
+
+# 3. Print the summary to see which variables survived the cut
+summary(best_glm_vehicles)
