@@ -574,17 +574,17 @@ data_filtered_trimmed <- data_filtered_trimmed %>%
     WEATHER_GROUPED = relevel(as.factor(WEATHER_GROUPED), ref = "Clear") # Clear set as baseline
   )
 
-# Create new model without lighting or drinking and the new weather data
+
 glm_fatals_v3 <- glm(
   FATALS ~ ns(TRAV_SP, df = 2) + FUNC_SYS + RUR_URB + WEATHER_GROUPED + AGE, 
   data = data_filtered_trimmed, 
   family = quasipoisson(link = "log")
 )
 
-# View the final summary
+
 summary(glm_fatals_v3)
 
-# Plotting for fatalities marginal effects
+
 speed_effect <- ggpredict(glm_fatals_v3, terms = "TRAV_SP [all]") 
 plot(speed_effect) +
   labs(
@@ -594,18 +594,18 @@ plot(speed_effect) +
   ) +
   theme_minimal()
 
-# 2. Visualize the Effect of Road Type
+
 road_effect <- ggpredict(glm_fatals_v3, terms = "FUNC_SYS")
 
-# 1. Convert the ggeffects object into a standard R data frame
+
 road_df <- as.data.frame(road_effect)
 
-# 2. Build the plot manually using native ggplot2
+
 ggplot(road_df, aes(x = x, y = predicted)) +
   geom_point(size = 2.5, color = "black") +
-  # Add the confidence intervals as error bars
+
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
-  # Now scale_x_discrete will work perfectly
+
   scale_x_discrete(labels = road_labels) +
   labs(
     title = "Predicted Fatalities by Road Type",
@@ -638,8 +638,8 @@ ggplot(weather_df, aes(x = x, y = predicted)) +
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-# Now do number of vehicles:
-# 1. Build the full Poisson model for Vehicles
+
+
 glm_vehicles_full <- glm(
   VE_TOTAL ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + LGT_COND + 
     WEATHER_GROUPED + HOUR + DAY_WEEK + DRINKING, 
@@ -647,9 +647,9 @@ glm_vehicles_full <- glm(
   family = "poisson"
 )
 
-# 2. Run Stepwise AIC to strip out the non-significant variables
+
 # trace = FALSE keeps the console output clean
 best_glm_vehicles <- stepAIC(glm_vehicles_full, direction = "both", trace = FALSE)
 
-# 3. Print the summary to see which variables survived the cut
+
 summary(best_glm_vehicles)
