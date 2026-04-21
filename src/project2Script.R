@@ -124,7 +124,7 @@ accident_weather <- accident_clean %>%
   summarise(avg_fatal = mean(FATALS, na.rm = TRUE), .groups = "drop")
 
 ggplot(accident_weather, aes(x = WEATHERNAME, y = avg_fatal)) +
-  geom_col(fill = "steelblue") +
+  geom_col(fill = "blue") +
   labs(title = "Average Fatalities by Weather Condition",
        x = "Weather",
        y = "Average Fatalities") +
@@ -140,7 +140,7 @@ accident_weather_vehicles <- accident_clean %>%
     .groups = "drop"
   )
 ggplot(accident_weather_vehicles, aes(x = WEATHERNAME, y = avg_vehicles)) +
-  geom_col(fill = "steelblue") +
+  geom_col(fill = "blue") +
   labs(
     title = "Average Number of Vehicles Involved by Weather Condition",
     x = "Weather Condition",
@@ -593,6 +593,20 @@ plot(speed_effect) +
     y = "Predicted Number of Fatalities"
   ) +
   theme_minimal()
+glm_vehicles_full <- glm(
+  VE_TOTAL ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + LGT_COND + 
+    WEATHER_GROUPED + HOUR + DAY_WEEK + DRINKING, 
+  data = data_filtered_trimmed, 
+  family = "poisson"
+)
+speed_vehicle_effect <- ggpredict(best_glm_vehicles, terms = "TRAV_SP [all]")
+plot(speed_vehicle_effect) +
+  labs(
+    title = "Predicted Number of Vehicles vs Speed",
+    x = "Travel Speed (MPH)",
+    y = "Predicted Number of Vehicles"
+  ) +
+  theme_minimal()
 
 
 road_effect <- ggpredict(glm_fatals_v3, terms = "FUNC_SYS")
@@ -653,3 +667,17 @@ best_glm_vehicles <- stepAIC(glm_vehicles_full, direction = "both", trace = FALS
 
 
 summary(best_glm_vehicles)
+best_glm_vehicles
+alcohol_vehicle_effect <- ggpredict(best_glm_vehicles, terms = "DRINKING")
+alcohol_df <- as.data.frame(alcohol_vehicle_effect)
+
+ggplot(alcohol_df, aes(x = x, y = predicted, fill = x)) +
+  geom_col(width = 0.5) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.15) +
+  labs(
+    title = "Predicted Number of Vehicles: Alcohol vs No Alcohol",
+    x = "Alcohol Involvement",
+    y = "Predicted Number of Vehicles"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
