@@ -115,7 +115,18 @@ data_filtered_trimmed <- data_joined %>%
   )
 
 summary(accident_clean$FATALS)
-plot(accident_clean$VE_TOTAL, accident_clean$FATALS)
+
+# Plot vehicles involved vs. fatalities
+ggplot(accident_clean, aes(x = VE_TOTAL, y = FATALS)) +
+  # alpha = 0.1 makes points 90% transparent; darker areas indicate more data
+  # width/height = 0.2 keeps the points near their original integer values
+  geom_jitter(alpha = 0.2, width = 0.2, height = 0.2) +
+  labs(
+    title = "Total Vehicles vs. Fatalities",
+    x = "Total Vehicles Involved",
+    y = "Number of Fatalities"
+  ) +
+  theme_minimal()
 
 # this one is comparing weather to the average fatality number
 accident_weather <- accident_clean %>%
@@ -125,6 +136,7 @@ accident_weather <- accident_clean %>%
 
 ggplot(accident_weather, aes(x = WEATHERNAME, y = avg_fatal)) +
   geom_col(fill = "blue") +
+  geom_text(aes(label = round(avg_fatal, 3)), vjust = -0.5, fontface = "bold") +
   labs(title = "Average Fatalities by Weather Condition",
        x = "Weather",
        y = "Average Fatalities") +
@@ -141,6 +153,7 @@ accident_weather_vehicles <- accident_clean %>%
   )
 ggplot(accident_weather_vehicles, aes(x = WEATHERNAME, y = avg_vehicles)) +
   geom_col(fill = "blue") +
+  geom_text(aes(label = round(avg_vehicles, 3)), vjust = -0.5, fontface = "bold") +
   labs(
     title = "Average Number of Vehicles Involved by Weather Condition",
     x = "Weather Condition",
@@ -168,6 +181,7 @@ age_summary_pb <- pbtype %>%
 
 ggplot(age_summary_pb, aes(x = age_group, y = count)) +
   geom_col(fill = "blue") +
+  geom_text(aes(label = round(count, 3)), vjust = -0.5, fontface = "bold") +
   labs(
     title = "Distribution of People in Crashes by Age Group (Pedestrian)",
     x = "Age Group",
@@ -193,6 +207,7 @@ age_summary <- person %>%
 
 ggplot(age_summary, aes(x = age_group, y = count)) +
   geom_col(fill = "blue") +
+  geom_text(aes(label = round(count, 3)), vjust = -0.5, fontface = "bold") +
   labs(
     title = "Distribution of People in Crashes by Age Group (Car)",
     x = "Age Group",
@@ -209,6 +224,8 @@ ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS)) +
   geom_jitter(alpha = 0.1) + # jitter helps with overlapping points
   geom_smooth(method = "gam") +
   labs(title = "Travel Speed vs. Number of Fatalities", x = "Travel Speed (MPH)", y = "Fatalities")
+
+# Speed vs. Number of Vehicles Involved
 ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = VE_TOTAL)) +
   geom_jitter(alpha = 0.1) +
   geom_smooth(method = "lm") +
@@ -218,6 +235,7 @@ ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = VE_TOTAL)) +
     y = "Number of Vehicles"
   ) +
   theme_minimal()
+
 # Age vs. Number of Vehicles Involved
 ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
   geom_jitter(alpha = 0.1) +
@@ -230,6 +248,7 @@ data_filtered_trimmed %>%
   summarise(mean_fatalities = mean(FATALS, na.rm = TRUE)) %>%
   ggplot(aes(x = DRINKING, y = mean_fatalities, fill = DRINKING)) +
   geom_col() +
+  geom_text(aes(label = round(mean_fatalities, 3)), vjust = -0.5, fontface = "bold") +
   labs(title = "Mean Fatalities: Alcohol vs. No Alcohol",
        y = "Average Number of Fatalities") +
   theme_minimal()
@@ -240,6 +259,7 @@ data_filtered_trimmed %>%
   summarise(mean_ve = mean(VE_TOTAL, na.rm = TRUE)) %>%
   ggplot(aes(x = reorder(LGT_COND, -mean_ve), y = mean_ve)) +
   geom_col(fill = "blue") +
+  geom_text(aes(label = round(mean_ve, 3)), vjust = -0.5, fontface = "bold") +
   labs(title = "Average Vehicles Involved by Lighting Condition", x = "Light Condition", y = "Avg Vehicles") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -249,6 +269,7 @@ ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS, color = DRINKING)) +
   labs(title = "Fatality Trend: Speed vs. Alcohol Interaction", 
        x = "Travel Speed", y = "Expected Fatalities") +
   theme_minimal()
+
 # Create accident-level alcohol indicator
 accident_alcohol <- data_filtered_trimmed %>%
   group_by(ST_CASE) %>%
@@ -268,12 +289,14 @@ accident_counts <- accident_alcohol %>%
 # Plot
 ggplot(accident_counts, aes(x = alcohol_involved, y = count, fill = alcohol_involved)) +
   geom_col() +
+  geom_text(aes(label = round(count, 3)), vjust = -0.5, fontface = "bold") +
   labs(
     title = "Number of Accidents: Alcohol vs No Alcohol",
     x = "Alcohol Involvement",
     y = "Number of Accidents"
   ) +
   theme_minimal()
+
 # Keep only drivers and valid sex values
 driver_sex <- person %>%
   filter(PER_TYP == 1, SEXNAME %in% c("Male", "Female")) %>%
@@ -300,6 +323,7 @@ accident_counts <- accident_sex %>%
 # Plot
 ggplot(accident_counts, aes(x = Sex, y = count, fill = Sex)) +
   geom_col() +
+  geom_text(aes(label = round(count, 3)), vjust = -0.5, fontface = "bold") +
   labs(
     title = "Number of Accidents Involving Male vs Female Drivers",
     x = "Driver Sex",
@@ -321,13 +345,15 @@ day_comparison <- accident_clean %>%
 
 ggplot(day_comparison, aes(x = day_group, y = mean_fatalities, fill = day_group)) +
   geom_col(width = 0.6) +
-  geom_text(aes(label = round(mean_fatalities, 4)), vjust = -0.5, size = 5) +
+  geom_text(aes(label = round(mean_fatalities, 3)), vjust = -0.5, fontface = "bold") +
   labs(
     title = "Mean Fatalities per Accident: Fri-Sun vs. Mon-Thu",
     x = "Days of the Week",
     y = "Average Fatalities per Accident"
   ) +
   theme_minimal()
+
+
 data_filtered_trimmed %>%
   mutate(AREA = factor(RUR_URB,
                        levels = c(1, 2),
@@ -336,6 +362,7 @@ data_filtered_trimmed %>%
   summarise(mean_fatalities = mean(FATALS, na.rm = TRUE)) %>%
   ggplot(aes(x = AREA, y = mean_fatalities, fill = AREA)) +
   geom_col(width = 0.6) +
+  geom_text(aes(label = round(mean_fatalities, 3)), vjust = -0.5, fontface = "bold") +
   labs(
     title = "Average Fatalities: Urban vs Rural",
     x = "Area Type",
@@ -368,7 +395,7 @@ road_type_comparison <- accident_clean %>%
 
 ggplot(road_type_comparison, aes(x = reorder(Road_Type, -avg_fatalities), y = avg_fatalities, fill = Road_Type)) +
   geom_col() +
-  # Removed coord_flip() to make bars vertical
+  geom_text(aes(label = round(avg_fatalities, 3)), vjust = -0.5, fontface = "bold") +
   labs(
     title = "Average Fatalities by Road Type",
     x = "Road Classification",
@@ -380,6 +407,7 @@ ggplot(road_type_comparison, aes(x = reorder(Road_Type, -avg_fatalities), y = av
     # Rotate x-axis labels so they don't overlap
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+
 road_vehicle_summary <- accident_clean %>%
   filter(FUNC_SYS >= 1 & FUNC_SYS <= 7) %>%
   mutate(Road_Type = factor(FUNC_SYS, labels = road_labels)) %>%
@@ -394,6 +422,7 @@ ggplot(road_vehicle_summary,
            y = avg_vehicles,
            fill = Road_Type)) +
   geom_col() +
+  geom_text(aes(label = round(avg_vehicles, 3)), vjust = -0.5, fontface = "bold") +
   labs(
     title = "Average Number of Vehicles Involved by Road Type",
     x = "Road Type",
@@ -576,7 +605,7 @@ glm_fatals_v3 <- glm(
 
 summary(glm_fatals_v3)
 
-
+# Find speed vs. fatalities
 speed_effect <- ggpredict(glm_fatals_v3, terms = "TRAV_SP [all]") 
 plot(speed_effect) +
   labs(
@@ -585,33 +614,22 @@ plot(speed_effect) +
     y = "Predicted Number of Fatalities"
   ) +
   theme_minimal()
+
 glm_vehicles_full <- glm(
   VE_TOTAL ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + LGT_COND + 
     WEATHER_GROUPED + HOUR + DAY_WEEK + DRINKING, 
   data = data_filtered_trimmed, 
   family = "poisson"
 )
-speed_vehicle_effect <- ggpredict(best_glm_vehicles, terms = "TRAV_SP [all]")
-plot(speed_vehicle_effect) +
-  labs(
-    title = "Predicted Number of Vehicles vs Speed",
-    x = "Travel Speed (MPH)",
-    y = "Predicted Number of Vehicles"
-  ) +
-  theme_minimal()
 
-
+# Find fatalities by road type
 road_effect <- ggpredict(glm_fatals_v3, terms = "FUNC_SYS")
-
-
 road_df <- as.data.frame(road_effect)
-
 
 ggplot(road_df, aes(x = x, y = predicted)) +
   geom_point(size = 2.5, color = "black") +
-
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
-
+  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
   scale_x_discrete(labels = road_labels) +
   labs(
     title = "Predicted Fatalities by Road Type",
@@ -634,6 +652,7 @@ ggplot(weather_df, aes(x = x, y = predicted)) +
   geom_point(size = 2.5, color = "black") +
   # width = 0.1 makes the horizontal caps on the error bars match the road plot
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.1, color = "black") +
+  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
   labs(
     title = "Predicted Fatalities by Weather Condition",
     x = "Weather",
@@ -697,6 +716,7 @@ road_df = as.data.frame(eff_road)
 ggplot(road_df, aes(x = x, y = predicted)) +
   geom_point(size = 2.5, color = "black") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
   scale_x_discrete(labels = road_labels) +
   labs(
     title = "Predicted Vehicles by Road Type",
@@ -713,6 +733,7 @@ location_df <- as.data.frame(eff_location)
 ggplot(location_df, aes(x = x, y = predicted)) +
   geom_point(size = 2.5, color = "black") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
   scale_x_discrete(labels = c("1" = "Rural", "2" = "Urban")) +
   labs(
     title = "Predicted Vehicles by Location Type",
@@ -728,6 +749,7 @@ light_df <- as.data.frame(eff_light)
 ggplot(light_df, aes(x = reorder(x, -predicted), y = predicted)) +
   geom_point(size = 2.5, color = "black") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
   labs(
     title = "Predicted Vehicles by Lighting Condition",
     x = "Lighting",
@@ -743,6 +765,7 @@ weather_df <- as.data.frame(eff_weather)
 ggplot(weather_df, aes(x = reorder(x, -predicted), y = predicted)) +
   geom_point(size = 2.5, color = "black") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
   labs(
     title = "Predicted Vehicles by Weather Condition",
     x = "Weather Group",
@@ -758,6 +781,7 @@ alcohol_df <- as.data.frame(eff_alcohol)
 ggplot(alcohol_df, aes(x = x, y = predicted)) +
   geom_point(size = 2.5, color = "black") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
   labs(
     title = "Predicted Vehicles by Alcohol Involvement",
     x = "Drinking Status",
