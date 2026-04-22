@@ -167,7 +167,7 @@ age_summary_pb <- pbtype %>%
   summarise(count = n())
 
 ggplot(age_summary_pb, aes(x = age_group, y = count)) +
-  geom_col(fill = "steelblue") +
+  geom_col(fill = "blue") +
   labs(
     title = "Distribution of People in Crashes by Age Group (Pedestrian)",
     x = "Age Group",
@@ -192,7 +192,7 @@ age_summary <- person %>%
   summarise(count = n())
 
 ggplot(age_summary, aes(x = age_group, y = count)) +
-  geom_col(fill = "steelblue") +
+  geom_col(fill = "blue") +
   labs(
     title = "Distribution of People in Crashes by Age Group (Car)",
     x = "Age Group",
@@ -206,12 +206,12 @@ ggplot(age_summary, aes(x = age_group, y = count)) +
 
 # Speed vs. Number of Fatalities
 ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS)) +
-  geom_jitter(alpha = 0.1, color = "steelblue") + # jitter helps with overlapping points
-  geom_smooth(method = "gam", color = "red") +
+  geom_jitter(alpha = 0.1) + # jitter helps with overlapping points
+  geom_smooth(method = "gam") +
   labs(title = "Travel Speed vs. Number of Fatalities", x = "Travel Speed (MPH)", y = "Fatalities")
 ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = VE_TOTAL)) +
-  geom_jitter(alpha = 0.2, color = "steelblue") +
-  geom_smooth(method = "lm", color = "red") +
+  geom_jitter(alpha = 0.1) +
+  geom_smooth(method = "lm") +
   labs(
     title = "Speed vs Number of Vehicles Involved",
     x = "Travel Speed (MPH)",
@@ -220,8 +220,8 @@ ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = VE_TOTAL)) +
   theme_minimal()
 # Age vs. Number of Vehicles Involved
 ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
-  geom_jitter(alpha = 0.1, color = "steelblue") +
-  geom_smooth(method = "lm", color = "red") +
+  geom_jitter(alpha = 0.1) +
+  geom_smooth(method = "lm") +
   labs(title = "Driver Age vs. Total Vehicles Involved", x = "Driver Age", y = "Total Vehicles")
 
 # Alcohol vs. Fatalities
@@ -322,10 +322,8 @@ day_comparison <- accident_clean %>%
 ggplot(day_comparison, aes(x = day_group, y = mean_fatalities, fill = day_group)) +
   geom_col(width = 0.6) +
   geom_text(aes(label = round(mean_fatalities, 4)), vjust = -0.5, size = 5) +
-  scale_fill_manual(values = c("Fri-Sun" = "#e41a1c", "Mon-Thu" = "#377eb8")) +
   labs(
     title = "Mean Fatalities per Accident: Fri-Sun vs. Mon-Thu",
-    subtitle = "Based on 2022 FARS Data",
     x = "Days of the Week",
     y = "Average Fatalities per Accident"
   ) +
@@ -421,10 +419,8 @@ ggplot(vehicle_day_comparison, aes(x = day_group, y = avg_vehicles, fill = day_g
   geom_col(width = 0.5) +
   # Adding text labels on top of the bars for clarity
   geom_text(aes(label = round(avg_vehicles, 3)), vjust = -0.5, fontface = "bold") +
-  scale_fill_manual(values = c("Fri-Sun" = "#feb24c", "Mon-Thu" = "#756bb1")) +
-  labs(
+    labs(
     title = "Average Number of Vehicles Involved: Fri-Sun vs. Mon-Thu",
-    subtitle = "Comparing multi-vehicle involvement across the week",
     x = "Days of the Week",
     y = "Average Vehicles per Accident"
   ) +
@@ -433,12 +429,11 @@ ggplot(vehicle_day_comparison, aes(x = day_group, y = avg_vehicles, fill = day_g
 
 ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
   # Jitter adds a small amount of random noise to help see density
-  geom_jitter(alpha = 0.1, color = "steelblue", width = 0.5, height = 0.5) +
+  geom_jitter(alpha = 0.1, width = 0.5, height = 0.5) +
   # Add a smooth trend line
-  geom_smooth(method = "gam", color = "darkred", size = 1.2) +
+  geom_smooth(method = "gam", size = 1.2) +
   labs(
     title = "Driver Age vs. Total Vehicles Involved",
-    subtitle = "Trend line shows how accident complexity changes with age",
     x = "Driver Age",
     y = "Total Vehicles"
   ) +
@@ -458,7 +453,6 @@ loc_vehicle_comparison <- accident_clean %>%
 ggplot(loc_vehicle_comparison, aes(x = Location, y = avg_vehicles, fill = Location)) +
   geom_col(width = 0.5) +
   geom_text(aes(label = round(avg_vehicles, 3)), vjust = -0.5, fontface = "bold") +
-  scale_fill_manual(values = c("Rural" = "#238b45", "Urban" = "#2171b5")) +
   labs(
     title = "Average Vehicles Involved: Rural vs. Urban",
     x = "Location Type",
@@ -491,12 +485,11 @@ ggplot(lighting_summary, aes(x = reorder(LGT_COND, -avg_fatalities), y = avg_fat
 # Plotting Driver Age vs. Fatalities
 ggplot(data_filtered_trimmed, aes(x = AGE, y = FATALS)) +
   # Jitter adds small random noise to points so you can see the 'clouds' of data
-  geom_jitter(alpha = 0.15, color = "steelblue", width = 0.5, height = 0.2) +
+  geom_jitter(alpha = 0.15, width = 0.5, height = 0.2) +
   # Adding a trend line to see if fatalities increase/decrease with age
-  geom_smooth(method = "gam", color = "darkred") +
+  geom_smooth(method = "gam") +
   labs(
     title = "Driver Age vs. Total Fatalities in Accident",
-    subtitle = "Each point represents one accident; darker areas indicate higher frequency",
     x = "Driver Age",
     y = "Number of Fatalities"
   ) +
@@ -511,7 +504,6 @@ data_filtered_trimmed %>%
   geom_text(aes(label = round(mean_vehicles, 3)), vjust = -0.5, fontface = "bold") +
   labs(
     title = "Average Number of Vehicles Involved: Alcohol vs. No Alcohol",
-    subtitle = "Analysis of crash complexity based on driver drinking status",
     x = "Drinking Status",
     y = "Average Number of Vehicles"
   ) +
@@ -653,9 +645,9 @@ ggplot(weather_df, aes(x = x, y = predicted)) +
   )
 
 
-
+# Initial model
 glm_vehicles_full <- glm(
-  VE_TOTAL ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + LGT_COND + 
+  VE_TOTAL ~ ns(TRAV_SP, df = 5) + FUNC_SYS + RUR_URB + LGT_COND + 
     WEATHER_GROUPED + HOUR + DAY_WEEK + DRINKING, 
   data = data_filtered_trimmed, 
   family = "poisson"
@@ -667,17 +659,108 @@ best_glm_vehicles <- stepAIC(glm_vehicles_full, direction = "both", trace = FALS
 
 
 summary(best_glm_vehicles)
-best_glm_vehicles
-alcohol_vehicle_effect <- ggpredict(best_glm_vehicles, terms = "DRINKING")
-alcohol_df <- as.data.frame(alcohol_vehicle_effect)
 
-ggplot(alcohol_df, aes(x = x, y = predicted, fill = x)) +
-  geom_col(width = 0.5) +
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.15) +
+# Filter out useless data
+data_filtered_trimmed = data_filtered_trimmed %>%
+  filter(
+    !(LGT_COND %in% c("Other", "Unknown", "NA"))
+  ) %>%
+  mutate(
+    LGT_COND = droplevels(LGT_COND)
+  )
+
+# Re-run model
+glm_vehicles_final = glm(
+  VE_TOTAL ~ ns(TRAV_SP, df = 5) + FUNC_SYS + RUR_URB + 
+    LGT_COND + WEATHER_GROUPED + DRINKING, 
+  family = "poisson", 
+  data = data_filtered_trimmed
+)
+
+# Give summary
+summary(glm_vehicles_final)
+
+# 1. Marginal Effect of Speed (Natural Spline)
+eff_speed = ggpredict(glm_vehicles_final, terms = "TRAV_SP [all]")
+plot(eff_speed, colors = "black") + 
   labs(
-    title = "Predicted Number of Vehicles: Alcohol vs No Alcohol",
-    x = "Alcohol Involvement",
+    title = "Effect of Speed on Vehicle Involvement",
+    x = "Travel Speed (MPH)", 
     y = "Predicted Number of Vehicles"
   ) +
+  theme_minimal()
+
+# 1. Road Classification (FUNC_SYS)
+eff_road = ggpredict(glm_vehicles_final, terms = "FUNC_SYS")
+road_df = as.data.frame(eff_road)
+
+ggplot(road_df, aes(x = x, y = predicted)) +
+  geom_point(size = 2.5, color = "black") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  scale_x_discrete(labels = road_labels) +
+  labs(
+    title = "Predicted Vehicles by Road Type",
+    x = "Road Classification",
+    y = "Predicted Vehicles"
+  ) +
   theme_minimal() +
-  theme(legend.position = "none")
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# 2. Location (Rural vs Urban)
+eff_location <- ggpredict(glm_vehicles_final, terms = "RUR_URB")
+location_df <- as.data.frame(eff_location)
+
+ggplot(location_df, aes(x = x, y = predicted)) +
+  geom_point(size = 2.5, color = "black") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  scale_x_discrete(labels = c("1" = "Rural", "2" = "Urban")) +
+  labs(
+    title = "Predicted Vehicles by Location Type",
+    x = "Location",
+    y = "Predicted Vehicles"
+  ) +
+  theme_minimal()
+
+# 3. Lighting Condition (LGT_COND)
+eff_light <- ggpredict(glm_vehicles_final, terms = "LGT_COND")
+light_df <- as.data.frame(eff_light)
+
+ggplot(light_df, aes(x = reorder(x, -predicted), y = predicted)) +
+  geom_point(size = 2.5, color = "black") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  labs(
+    title = "Predicted Vehicles by Lighting Condition",
+    x = "Lighting",
+    y = "Predicted Vehicles"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# 4. Weather Group (WEATHER_GROUPED)
+eff_weather <- ggpredict(glm_vehicles_final, terms = "WEATHER_GROUPED")
+weather_df <- as.data.frame(eff_weather)
+
+ggplot(weather_df, aes(x = reorder(x, -predicted), y = predicted)) +
+  geom_point(size = 2.5, color = "black") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  labs(
+    title = "Predicted Vehicles by Weather Condition",
+    x = "Weather Group",
+    y = "Predicted Vehicles"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# 5. Alcohol Involvement (DRINKING)
+eff_alcohol <- ggpredict(glm_vehicles_final, terms = "DRINKING")
+alcohol_df <- as.data.frame(eff_alcohol)
+
+ggplot(alcohol_df, aes(x = x, y = predicted)) +
+  geom_point(size = 2.5, color = "black") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  labs(
+    title = "Predicted Vehicles by Alcohol Involvement",
+    x = "Drinking Status",
+    y = "Predicted Vehicles"
+  ) +
+  theme_minimal()
