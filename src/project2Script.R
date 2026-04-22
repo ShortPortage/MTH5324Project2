@@ -127,6 +127,7 @@ ggplot(accident_clean, aes(x = VE_TOTAL, y = FATALS)) +
     y = "Number of Fatalities"
   ) +
   theme_minimal()
+ggsave("figures/01_total_vehicles_vs_fatalities.png")
 
 # this one is comparing weather to the average fatality number
 accident_weather <- accident_clean %>%
@@ -144,6 +145,7 @@ ggplot(accident_weather, aes(x = WEATHERNAME, y = avg_fatal)) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, size = 10)
   )
+ggsave("figures/02_avg_fatalities_by_weather.png")
 accident_weather_vehicles <- accident_clean %>%
   left_join(weather, by = "ST_CASE") %>%
   group_by(WEATHERNAME) %>%
@@ -163,6 +165,7 @@ ggplot(accident_weather_vehicles, aes(x = WEATHERNAME, y = avg_vehicles)) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, size = 10)
   )
+ggsave("figures/03_avg_vehicles_by_weather.png")
 
 # average age pedestrian
 pbtype$PBAGE <- as.numeric(pbtype$PBAGE)
@@ -189,6 +192,7 @@ ggplot(age_summary_pb, aes(x = age_group, y = count)) +
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("figures/04_pedestrian_age_distribution.png")
 
 # average age
 person$AGE <- as.numeric(person$AGE)
@@ -215,6 +219,7 @@ ggplot(age_summary, aes(x = age_group, y = count)) +
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("figures/05_car_age_distribution.png")
 
 # Responses: Fatal accident indicator, number of vehicles
 # Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
@@ -224,6 +229,7 @@ ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS)) +
   geom_jitter(alpha = 0.1) + # jitter helps with overlapping points
   geom_smooth(method = "gam") +
   labs(title = "Travel Speed vs. Number of Fatalities", x = "Travel Speed (MPH)", y = "Fatalities")
+ggsave("figures/06_speed_vs_fatalities.png")
 
 # Speed vs. Number of Vehicles Involved
 ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = VE_TOTAL)) +
@@ -235,12 +241,14 @@ ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = VE_TOTAL)) +
     y = "Number of Vehicles"
   ) +
   theme_minimal()
+ggsave("figures/07_speed_vs_vehicles.png")
 
 # Age vs. Number of Vehicles Involved
 ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
   geom_jitter(alpha = 0.1) +
   geom_smooth(method = "lm") +
   labs(title = "Driver Age vs. Total Vehicles Involved", x = "Driver Age", y = "Total Vehicles")
+ggsave("figures/08_age_vs_vehicles_lm.png")
 
 # Alcohol vs. Fatalities
 data_filtered_trimmed %>%
@@ -252,6 +260,7 @@ data_filtered_trimmed %>%
   labs(title = "Mean Fatalities: Alcohol vs. No Alcohol",
        y = "Average Number of Fatalities") +
   theme_minimal()
+ggsave("figures/09_alcohol_vs_fatalities.png")
 
 # Lighting Condition vs. Total Vehicles (Mean Comparison)
 data_filtered_trimmed %>%
@@ -262,6 +271,7 @@ data_filtered_trimmed %>%
   geom_text(aes(label = round(mean_ve, 3)), vjust = -0.5, fontface = "bold") +
   labs(title = "Average Vehicles Involved by Lighting Condition", x = "Light Condition", y = "Avg Vehicles") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("figures/10_lighting_vs_vehicles.png")
 
 # Interaction of Speed and Alcohol on Fatalities
 ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS, color = DRINKING)) +
@@ -269,6 +279,7 @@ ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS, color = DRINKING)) +
   labs(title = "Fatality Trend: Speed vs. Alcohol Interaction", 
        x = "Travel Speed", y = "Expected Fatalities") +
   theme_minimal()
+ggsave("figures/11_speed_alcohol_fatalities.png")
 
 # Create accident-level alcohol indicator
 accident_alcohol <- data_filtered_trimmed %>%
@@ -296,6 +307,7 @@ ggplot(accident_counts, aes(x = alcohol_involved, y = count, fill = alcohol_invo
     y = "Number of Accidents"
   ) +
   theme_minimal()
+ggsave("figures/12_accidents_alcohol_vs_no.png")
 
 # Keep only drivers and valid sex values
 driver_sex <- person %>%
@@ -330,6 +342,7 @@ ggplot(accident_counts, aes(x = Sex, y = count, fill = Sex)) +
     y = "Number of Accidents"
   ) +
   theme_minimal()
+ggsave("figures/13_accidents_by_sex.png")
 
 
 
@@ -352,6 +365,7 @@ ggplot(day_comparison, aes(x = day_group, y = mean_fatalities, fill = day_group)
     y = "Average Fatalities per Accident"
   ) +
   theme_minimal()
+ggsave("figures/14_mean_fatalities_frisun_vs_weekday.png")
 
 
 data_filtered_trimmed %>%
@@ -370,6 +384,7 @@ data_filtered_trimmed %>%
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+ggsave("figures/15_avg_fatalities_urban_vs_rural.png")
 
 # 1. Define labels for the Functional System
 road_labels <- c(
@@ -407,6 +422,7 @@ ggplot(road_type_comparison, aes(x = reorder(Road_Type, -avg_fatalities), y = av
     # Rotate x-axis labels so they don't overlap
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+ggsave("figures/16_avg_fatalities_by_road_type.png")
 
 road_vehicle_summary <- accident_clean %>%
   filter(FUNC_SYS >= 1 & FUNC_SYS <= 7) %>%
@@ -433,6 +449,7 @@ ggplot(road_vehicle_summary,
     legend.position = "none",
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+ggsave("figures/17_avg_vehicles_by_road_type.png")
 
 
 vehicle_day_comparison <- accident_clean %>%
@@ -448,13 +465,14 @@ ggplot(vehicle_day_comparison, aes(x = day_group, y = avg_vehicles, fill = day_g
   geom_col(width = 0.5) +
   # Adding text labels on top of the bars for clarity
   geom_text(aes(label = round(avg_vehicles, 3)), vjust = -0.5, fontface = "bold") +
-    labs(
+  labs(
     title = "Average Number of Vehicles Involved: Fri-Sun vs. Mon-Thu",
     x = "Days of the Week",
     y = "Average Vehicles per Accident"
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+ggsave("figures/18_avg_vehicles_frisun_vs_weekday.png")
 
 ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
   # Jitter adds a small amount of random noise to help see density
@@ -467,6 +485,7 @@ ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
     y = "Total Vehicles"
   ) +
   theme_minimal()
+ggsave("figures/19_age_vs_vehicles_gam.png")
 
 # 1. Summarize the data by location type
 loc_vehicle_comparison <- accident_clean %>%
@@ -489,6 +508,7 @@ ggplot(loc_vehicle_comparison, aes(x = Location, y = avg_vehicles, fill = Locati
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+ggsave("figures/20_avg_vehicles_rural_vs_urban.png")
 
 # 1. Summarize fatalities by Lighting Condition
 lighting_summary <- data_filtered_trimmed %>%
@@ -510,6 +530,7 @@ ggplot(lighting_summary, aes(x = reorder(LGT_COND, -avg_fatalities), y = avg_fat
     legend.position = "none",
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+ggsave("figures/21_avg_fatalities_by_lighting.png")
 
 # Plotting Driver Age vs. Fatalities
 ggplot(data_filtered_trimmed, aes(x = AGE, y = FATALS)) +
@@ -523,6 +544,7 @@ ggplot(data_filtered_trimmed, aes(x = AGE, y = FATALS)) +
     y = "Number of Fatalities"
   ) +
   theme_minimal()
+ggsave("figures/22_age_vs_fatalities.png")
 
 # Alcohol vs. Number of Vehicles Involved (Mean Comparison)
 data_filtered_trimmed %>%
@@ -538,6 +560,7 @@ data_filtered_trimmed %>%
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+ggsave("figures/23_avg_vehicles_alcohol_vs_no.png")
 
 # Responses: Fatal accident indicator, number of vehicles
 # Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
@@ -614,6 +637,7 @@ plot(speed_effect) +
     y = "Predicted Number of Fatalities"
   ) +
   theme_minimal()
+ggsave("figures/24_predicted_fatalities_by_speed.png")
 
 glm_vehicles_full <- glm(
   VE_TOTAL ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + LGT_COND + 
@@ -640,6 +664,7 @@ ggplot(road_df, aes(x = x, y = predicted)) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+ggsave("figures/25_predicted_fatalities_by_road_type.png")
 
 # 3. Visualize the Effect of Extreme Weather
 weather_effect <- ggpredict(glm_fatals_v3, terms = "WEATHER_GROUPED")
@@ -662,6 +687,7 @@ ggplot(weather_df, aes(x = x, y = predicted)) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+ggsave("figures/26_predicted_fatalities_by_weather.png")
 
 
 # Initial model
@@ -708,6 +734,7 @@ plot(eff_speed, colors = "black") +
     y = "Predicted Number of Vehicles"
   ) +
   theme_minimal()
+ggsave("figures/27_effect_speed_on_vehicles.png")
 
 # 1. Road Classification (FUNC_SYS)
 eff_road = ggpredict(glm_vehicles_final, terms = "FUNC_SYS")
@@ -725,6 +752,7 @@ ggplot(road_df, aes(x = x, y = predicted)) +
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("figures/28_predicted_vehicles_by_road_type.png")
 
 # 2. Location (Rural vs Urban)
 eff_location <- ggpredict(glm_vehicles_final, terms = "RUR_URB")
@@ -741,6 +769,7 @@ ggplot(location_df, aes(x = x, y = predicted)) +
     y = "Predicted Vehicles"
   ) +
   theme_minimal()
+ggsave("figures/29_predicted_vehicles_by_location.png")
 
 # 3. Lighting Condition (LGT_COND)
 eff_light <- ggpredict(glm_vehicles_final, terms = "LGT_COND")
@@ -757,6 +786,7 @@ ggplot(light_df, aes(x = reorder(x, -predicted), y = predicted)) +
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("figures/30_predicted_vehicles_by_lighting.png")
 
 # 4. Weather Group (WEATHER_GROUPED)
 eff_weather <- ggpredict(glm_vehicles_final, terms = "WEATHER_GROUPED")
@@ -773,6 +803,7 @@ ggplot(weather_df, aes(x = reorder(x, -predicted), y = predicted)) +
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("figures/31_predicted_vehicles_by_weather.png")
 
 # 5. Alcohol Involvement (DRINKING)
 eff_alcohol <- ggpredict(glm_vehicles_final, terms = "DRINKING")
@@ -788,3 +819,4 @@ ggplot(alcohol_df, aes(x = x, y = predicted)) +
     y = "Predicted Vehicles"
   ) +
   theme_minimal()
+ggsave("figures/32_predicted_vehicles_by_alcohol.png")
