@@ -7,6 +7,10 @@ library(olsrr)
 library(MASS)
 library(splines)
 library(ggeffects)
+library(glmmTMB)
+library(MuMIn)
+library(DHARMa)
+
 # Responses: Fatal accident indicator, number of vehicles
 # Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
 
@@ -62,8 +66,8 @@ vpicdecode = read_csv(archive_read(zip, file = "FARS2022NationalCSV/vpicdecode.c
 #vsoe = read_csv(archive_read(zip, file = "FARS2022NationalCSV/vsoe.csv"))  # not useful
 weather = read_csv(archive_read(zip, file = "FARS2022NationalCSV/weather.csv"))  #useful
 
-
-accident_clean <- accident[, c(
+# Get most data from the accident file
+accident_clean = accident[, c(
   "ST_CASE",
   "FATALS",
   "VE_TOTAL",
@@ -95,10 +99,12 @@ person_clean = person[person$PER_TYP == 1, c(
   "DRINKING"
 )]
 
+# Join data
 driver_vehicle = inner_join(person_clean, vehicle_clean, by = c("ST_CASE", "VEH_NO"))
 data_joined = inner_join(driver_vehicle, accident_clean, by = c("ST_CASE"))
 
-data_filtered_trimmed <- data_joined %>%
+# Initial filtering of data
+data_filtered_trimmed = data_joined %>%
   filter(
     TRAV_SP < 140,        # filter out speeds that aren't real
     AGE < 100,            # Filter out age codes 
@@ -130,11 +136,12 @@ ggplot(accident_clean, aes(x = VE_TOTAL, y = FATALS)) +
 ggsave("figures/01_total_vehicles_vs_fatalities.png")
 
 # this one is comparing weather to the average fatality number
-accident_weather <- accident_clean %>%
+accident_weather = accident_clean %>%
   left_join(weather, by = "ST_CASE") %>%
   group_by(WEATHERNAME) %>%
   summarise(avg_fatal = mean(FATALS, na.rm = TRUE), .groups = "drop")
 
+# Plot fatalities by weather
 ggplot(accident_weather, aes(x = WEATHERNAME, y = avg_fatal)) +
   geom_col(fill = "blue") +
   geom_text(aes(label = round(avg_fatal, 3)), vjust = -0.5, fontface = "bold") +
@@ -146,13 +153,17 @@ ggplot(accident_weather, aes(x = WEATHERNAME, y = avg_fatal)) +
     axis.text.x = element_text(angle = 45, hjust = 1, size = 10)
   )
 ggsave("figures/02_avg_fatalities_by_weather.png")
-accident_weather_vehicles <- accident_clean %>%
+
+# Prepare weather vehicle involvement data
+accident_weather_vehicles = accident_clean %>%
   left_join(weather, by = "ST_CASE") %>%
   group_by(WEATHERNAME) %>%
   summarise(
     avg_vehicles = mean(VE_TOTAL, na.rm = TRUE),
     .groups = "drop"
   )
+
+# Plot vehicle involvement vs weather condition
 ggplot(accident_weather_vehicles, aes(x = WEATHERNAME, y = avg_vehicles)) +
   geom_col(fill = "blue") +
   geom_text(aes(label = round(avg_vehicles, 3)), vjust = -0.5, fontface = "bold") +
@@ -168,8 +179,8 @@ ggplot(accident_weather_vehicles, aes(x = WEATHERNAME, y = avg_vehicles)) +
 ggsave("figures/03_avg_vehicles_by_weather.png")
 
 # average age pedestrian
-pbtype$PBAGE <- as.numeric(pbtype$PBAGE)
-pbtype$age_group <- cut(
+pbtype$PBAGE = as.numeric(pbtype$PBAGE)
+pbtype$age_group = cut(
   pbtype$PBAGE,
   breaks = seq(0, 100, by = 10),
   right = FALSE,
@@ -178,10 +189,12 @@ pbtype$age_group <- cut(
              "50-59","60-69","70-79","80-89","90-99")
 )
 
-age_summary_pb <- pbtype %>%
+# group by pedestrian age
+age_summary_pb = pbtype %>%
   group_by(age_group) %>%
   summarise(count = n())
 
+# plot pedestrian age crash distribution
 ggplot(age_summary_pb, aes(x = age_group, y = count)) +
   geom_col(fill = "blue") +
   geom_text(aes(label = round(count, 3)), vjust = -0.5, fontface = "bold") +
@@ -195,8 +208,8 @@ ggplot(age_summary_pb, aes(x = age_group, y = count)) +
 ggsave("figures/04_pedestrian_age_distribution.png")
 
 # average age
-person$AGE <- as.numeric(person$AGE)
-person$age_group <- cut(
+person$AGE = as.numeric(person$AGE)
+person$age_group = cut(
   person$AGE,
   breaks = seq(0, 100, by = 10),
   right = FALSE,
@@ -205,10 +218,12 @@ person$age_group <- cut(
              "50-59","60-69","70-79","80-89","90-99")
 )
 
-age_summary <- person %>%
+# Group by age
+age_summary = person %>%
   group_by(age_group) %>%
   summarise(count = n())
 
+# Plot crashes vs age
 ggplot(age_summary, aes(x = age_group, y = count)) +
   geom_col(fill = "blue") +
   geom_text(aes(label = round(count, 3)), vjust = -0.5, fontface = "bold") +
@@ -220,9 +235,6 @@ ggplot(age_summary, aes(x = age_group, y = count)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave("figures/05_car_age_distribution.png")
-
-# Responses: Fatal accident indicator, number of vehicles
-# Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
 
 # Speed vs. Number of Fatalities
 ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS)) +
@@ -285,7 +297,7 @@ ggplot(data_filtered_trimmed, aes(x = TRAV_SP, y = FATALS, color = DRINKING)) +
 ggsave("figures/11_speed_alcohol_fatalities.png")
 
 # Create accident-level alcohol indicator
-accident_alcohol <- data_filtered_trimmed %>%
+accident_alcohol = data_filtered_trimmed %>%
   group_by(ST_CASE) %>%
   summarise(
     alcohol_involved = any(DRINKING == "Alcohol Involved")
@@ -295,12 +307,12 @@ accident_alcohol <- data_filtered_trimmed %>%
                               labels = c("No Alcohol", "Alcohol Involved"))
   )
 
-# Count accidents
-accident_counts <- accident_alcohol %>%
+# Prepare alcohol data
+accident_counts = accident_alcohol %>%
   group_by(alcohol_involved) %>%
   summarise(count = n())
 
-# Plot
+# Plot accidents where alcohol was involved vs not
 ggplot(accident_counts, aes(x = alcohol_involved, y = count, fill = alcohol_involved)) +
   geom_col() +
   geom_text(aes(label = round(count, 3)), vjust = -0.5, fontface = "bold") +
@@ -313,20 +325,20 @@ ggplot(accident_counts, aes(x = alcohol_involved, y = count, fill = alcohol_invo
 ggsave("figures/12_accidents_alcohol_vs_no.png")
 
 # Keep only drivers and valid sex values
-driver_sex <- person %>%
+driver_sex = person %>%
   filter(PER_TYP == 1, SEXNAME %in% c("Male", "Female")) %>%
   dplyr::select(ST_CASE, SEXNAME)
 
 # Collapse to accident level
-accident_sex <- driver_sex %>%
+accident_sex = driver_sex %>%
   group_by(ST_CASE) %>%
   summarise(
     male_involved = any(SEXNAME == "Male"),
     female_involved = any(SEXNAME == "Female")
   )
 
-# Convert to long format for counting
-accident_counts <- accident_sex %>%
+# Prepare accidents vs driver sex data
+accident_counts = accident_sex %>%
   summarise(
     Male = sum(male_involved),
     Female = sum(female_involved)
@@ -335,7 +347,7 @@ accident_counts <- accident_sex %>%
                       names_to = "Sex",
                       values_to = "count")
 
-# Plot
+# Plot accidents vs driver sex
 ggplot(accident_counts, aes(x = Sex, y = count, fill = Sex)) +
   geom_col() +
   geom_text(aes(label = round(count, 3)), vjust = -0.5, fontface = "bold") +
@@ -347,9 +359,8 @@ ggplot(accident_counts, aes(x = Sex, y = count, fill = Sex)) +
   theme_minimal()
 ggsave("figures/13_accidents_by_sex.png")
 
-
-
-day_comparison <- accident_clean %>%
+# Get data for fatalities on weekdays/weekends
+day_comparison = accident_clean %>%
   mutate(day_group = ifelse(DAY_WEEK %in% c(6, 7, 1), "Fri-Sun", "Mon-Thu")) %>%
   group_by(day_group) %>%
   summarise(
@@ -358,7 +369,7 @@ day_comparison <- accident_clean %>%
     .groups = "drop"
   )
 
-
+# Plot fatalities vs. weekday/end
 ggplot(day_comparison, aes(x = day_group, y = mean_fatalities, fill = day_group)) +
   geom_col(width = 0.6) +
   geom_text(aes(label = round(mean_fatalities, 3)), vjust = -0.5, fontface = "bold") +
@@ -370,7 +381,7 @@ ggplot(day_comparison, aes(x = day_group, y = mean_fatalities, fill = day_group)
   theme_minimal()
 ggsave("figures/14_mean_fatalities_frisun_vs_weekday.png")
 
-
+# Get fatalities by rur/urb then plot
 # Have to run this twice to get rid of N/A column
 data_filtered_trimmed %>%
   mutate(AREA = factor(RUR_URB,
@@ -388,6 +399,8 @@ data_filtered_trimmed %>%
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+
+# Get fatalities by rur/urb then plot
 data_filtered_trimmed %>%
   mutate(AREA = factor(RUR_URB,
                        levels = c(1, 2),
@@ -406,8 +419,8 @@ data_filtered_trimmed %>%
   theme(legend.position = "none")
 ggsave("figures/15_avg_fatalities_urban_vs_rural.png")
 
-# 1. Define labels for the Functional System
-road_labels <- c(
+# Define labels for roads
+road_labels = c(
   "Interstate", 
   "Arterial-Freeway", 
   "Arterial-Other", 
@@ -417,8 +430,8 @@ road_labels <- c(
   "Local"
 )
 
-
-road_type_comparison <- accident_clean %>%
+# get data for fatalities vs road type
+road_type_comparison = accident_clean %>%
   filter(FUNC_SYS >= 1 & FUNC_SYS <= 7) %>%
   mutate(Road_Type = factor(FUNC_SYS, labels = road_labels)) %>%
   group_by(Road_Type) %>%
@@ -427,7 +440,7 @@ road_type_comparison <- accident_clean %>%
     .groups = "drop"
   )
 
-
+# Plot avg fatalities vs. road type
 ggplot(road_type_comparison, aes(x = reorder(Road_Type, -avg_fatalities), y = avg_fatalities, fill = Road_Type)) +
   geom_col() +
   geom_text(aes(label = round(avg_fatalities, 3)), vjust = -0.5, fontface = "bold") +
@@ -439,12 +452,12 @@ ggplot(road_type_comparison, aes(x = reorder(Road_Type, -avg_fatalities), y = av
   theme_minimal() +
   theme(
     legend.position = "none",
-    # Rotate x-axis labels so they don't overlap
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 ggsave("figures/16_avg_fatalities_by_road_type.png")
 
-road_vehicle_summary <- accident_clean %>%
+# Get data for vehicle involvement vs. road type (this is what FUNC_SYS is)
+road_vehicle_summary = accident_clean %>%
   filter(FUNC_SYS >= 1 & FUNC_SYS <= 7) %>%
   mutate(Road_Type = factor(FUNC_SYS, labels = road_labels)) %>%
   group_by(Road_Type) %>%
@@ -453,6 +466,7 @@ road_vehicle_summary <- accident_clean %>%
     .groups = "drop"
   )
 
+# Plot vehicle involvement vs. road type
 ggplot(road_vehicle_summary,
        aes(x = reorder(Road_Type, -avg_vehicles),
            y = avg_vehicles,
@@ -471,8 +485,8 @@ ggplot(road_vehicle_summary,
   )
 ggsave("figures/17_avg_vehicles_by_road_type.png")
 
-
-vehicle_day_comparison <- accident_clean %>%
+# Prepare avg vehicle involvement per weekday/weekend
+vehicle_day_comparison = accident_clean %>%
   # Categorize 1 (Sun), 6 (Fri), 7 (Sat) as Fri-Sun
   mutate(day_group = ifelse(DAY_WEEK %in% c(6, 7, 1), "Fri-Sun", "Mon-Thu")) %>%
   group_by(day_group) %>%
@@ -481,6 +495,7 @@ vehicle_day_comparison <- accident_clean %>%
     .groups = "drop"
   )
 
+# Plot vehicle involvement vs. day
 ggplot(vehicle_day_comparison, aes(x = day_group, y = avg_vehicles, fill = day_group)) +
   geom_col(width = 0.5) +
   # Adding text labels on top of the bars for clarity
@@ -494,10 +509,9 @@ ggplot(vehicle_day_comparison, aes(x = day_group, y = avg_vehicles, fill = day_g
   theme(legend.position = "none")
 ggsave("figures/18_avg_vehicles_frisun_vs_weekday.png")
 
+# Plot vehicle involvement vs. age
 ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
-  # Jitter adds a small amount of random noise to help see density
   geom_jitter(alpha = 0.1, width = 0.5, height = 0.5) +
-  # Add a smooth trend line
   geom_smooth(method = "gam", size = 1.2) +
   labs(
     title = "Driver Age vs. Total Vehicles Involved",
@@ -507,8 +521,8 @@ ggplot(data_filtered_trimmed, aes(x = AGE, y = VE_TOTAL)) +
   theme_minimal()
 ggsave("figures/19_age_vs_vehicles_gam.png")
 
-# 1. Summarize the data by location type
-loc_vehicle_comparison <- accident_clean %>%
+# Get vehicle invovlement data by rur/urb 
+loc_vehicle_comparison = accident_clean %>%
   filter(RUR_URB %in% c(1, 2)) %>%
   mutate(Location = factor(RUR_URB, labels = c("Rural", "Urban"))) %>%
   group_by(Location) %>%
@@ -517,7 +531,7 @@ loc_vehicle_comparison <- accident_clean %>%
     .groups = "drop"
   )
 
-# 2. Plot with vertical bars
+# Plot vehicle involvement vs rur/urb
 ggplot(loc_vehicle_comparison, aes(x = Location, y = avg_vehicles, fill = Location)) +
   geom_col(width = 0.5) +
   geom_text(aes(label = round(avg_vehicles, 3)), vjust = -0.5, fontface = "bold") +
@@ -530,13 +544,13 @@ ggplot(loc_vehicle_comparison, aes(x = Location, y = avg_vehicles, fill = Locati
   theme(legend.position = "none")
 ggsave("figures/20_avg_vehicles_rural_vs_urban.png")
 
-# 1. Summarize fatalities by Lighting Condition
-lighting_summary <- data_filtered_trimmed %>%
+# Filter, group, and summarize fatality data for lighting conditons
+lighting_summary = data_filtered_trimmed %>%
   filter(LGT_COND %in% c("Daylight", "Dark-Not Lit", "Dark-Lit", "Dawn", "Dusk")) %>%
   group_by(LGT_COND) %>%
   summarise(avg_fatalities = mean(FATALS, na.rm = TRUE))
 
-# 2. Plot vertical bars
+# Plot fatalities vs. lighting
 ggplot(lighting_summary, aes(x = reorder(LGT_COND, -avg_fatalities), y = avg_fatalities, fill = LGT_COND)) +
   geom_col(width = 0.6) +
   geom_text(aes(label = round(avg_fatalities, 3)), vjust = -0.5, fontface = "bold") +
@@ -552,13 +566,13 @@ ggplot(lighting_summary, aes(x = reorder(LGT_COND, -avg_fatalities), y = avg_fat
   )
 ggsave("figures/21_avg_fatalities_by_lighting.png")
 
-# 1. Summarize average vehicles by Lighting Condition
-lighting_vehicle_summary <- data_filtered_trimmed %>%
+# Filter, group, and summarize vehicle data for lighting conditons
+lighting_vehicle_summary = data_filtered_trimmed %>%
   filter(LGT_COND %in% c("Daylight", "Dark-Not Lit", "Dark-Lit", "Dawn", "Dusk")) %>%
   group_by(LGT_COND) %>%
   summarise(avg_vehicles = mean(VE_TOTAL, na.rm = TRUE), .groups = "drop")
 
-# 2. Plot vertical bars for vehicles
+# Plot avg vehicles with lighting conditions
 ggplot(lighting_vehicle_summary, aes(x = reorder(LGT_COND, -avg_vehicles), y = avg_vehicles, fill = LGT_COND)) +
   geom_col(width = 0.6) +
   geom_text(aes(label = round(avg_vehicles, 3)), vjust = -0.5, fontface = "bold") +
@@ -572,15 +586,11 @@ ggplot(lighting_vehicle_summary, aes(x = reorder(LGT_COND, -avg_vehicles), y = a
     legend.position = "none",
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
-
-# 3. Save the figure
 ggsave("figures/21a_avg_vehicles_by_lighting.png")
 
 # Plotting Driver Age vs. Fatalities
 ggplot(data_filtered_trimmed, aes(x = AGE, y = FATALS)) +
-  # Jitter adds small random noise to points so you can see the 'clouds' of data
   geom_jitter(alpha = 0.15, width = 0.5, height = 0.2) +
-  # Adding a trend line to see if fatalities increase/decrease with age
   geom_smooth(method = "gam") +
   labs(
     title = "Driver Age vs. Total Fatalities in Accident",
@@ -606,6 +616,16 @@ data_filtered_trimmed %>%
   theme(legend.position = "none")
 ggsave("figures/23_avg_vehicles_alcohol_vs_no.png")
 
+##########################################################################################################
+
+##########################################################################################################
+
+##########################################################################################################
+
+##########################################################################################################
+
+##########################################################################################################
+
 # Responses: Fatal accident indicator, number of vehicles
 # Predictors: Speed, weather, lighting, road type, time, driver age, alcohol, location
 
@@ -618,22 +638,26 @@ ggsave("figures/23_avg_vehicles_alcohol_vs_no.png")
 # Weak Predictors: Age
 
 # Setup poisson model for fatalities
-glm_fatals_full <- glm(
-  FATALS ~ ns(TRAV_SP, df=4) + FUNC_SYS + RUR_URB + DRINKING + WEATHER + LGT_COND + AGE, 
+glm_fatals_full = glm(
+  FATALS ~ ns(TRAV_SP, df=4) + FUNC_SYS + RUR_URB*DRINKING + RUR_URB + DRINKING + WEATHER + LGT_COND + AGE, 
   data = data_filtered_trimmed, 
   family = "poisson"
 )
 
 # Stepwise selection
-best_glm_fatals <- stepAIC(glm_fatals_full, direction = "both", trace = FALSE)
+best_glm_fatals = stepAIC(glm_fatals_full, direction = "both", trace = FALSE)
 
 # Summary
 summary(best_glm_fatals)
 
-# Step AIC doesn't work with quasipoisson but we need it to correct underdispersion.
+# Get dispersion
+fatal_dispersion_full = sum(residuals(glm_fatals_full, type = "pearson")^2) / glm_fatals_full$df.residual
+print(fatal_dispersion_full)
+
+# Step AIC doesn't work with quasipoisson but we need because of dispersion.
 # We now use the full model here
 
-glm_fatals_v2 <- glm(
+glm_fatals_v2 = glm(
   FATALS ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + DRINKING + WEATHER + LGT_COND + AGE,
   data = data_filtered_trimmed,
   family = quasipoisson(link = "log")
@@ -645,7 +669,7 @@ summary(glm_fatals_v2)
 # Lighting has high p-values and drinking has a tiny coefficient. So we can remove them
 
 # Create the new grouped weather variable and filter out unknown codes
-data_filtered_trimmed <- data_filtered_trimmed %>%
+data_filtered_trimmed = data_filtered_trimmed %>%
   filter(
     !FUNC_SYS %in% c("96", "98", "99"), # Included 99 just in case it exists as "Unknown"
     !RUR_URB %in% c("6", "8", "9")      # Included 8 just in case it exists as "Not Reported"
@@ -663,116 +687,95 @@ data_filtered_trimmed <- data_filtered_trimmed %>%
     WEATHER_GROUPED = relevel(as.factor(WEATHER_GROUPED), ref = "Clear") # Clear set as baseline
   )
 
-
-glm_fatals_v3 <- glm(
+# Make new model with grouped and trimmed data
+glm_fatals_v3 = glm(
   FATALS ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + WEATHER_GROUPED + AGE, 
   data = data_filtered_trimmed, 
   family = quasipoisson(link = "log")
 )
 
-
+# Summarize
 summary(glm_fatals_v3)
 
-# Find speed vs. fatalities
-speed_effect <- ggpredict(glm_fatals_v3, terms = "TRAV_SP [all]") 
-plot(speed_effect) +
-  labs(
-    title = "Predicted Fatalities by Speed",
-    x = "Travel Speed (mph)",
-    y = "Predicted Number of Fatalities"
-  ) +
-  theme_minimal()
-ggsave("figures/24_predicted_fatalities_by_speed.png")
+# Make ZTP model
+ztp_fatal_global <- glmmTMB(
+  FATALS ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + WEATHER_GROUPED + AGE,
+  data = data_filtered_trimmed,
+  family = truncated_poisson(link = "log"),
+  na.action = "na.fail"
+)
 
-# 1. Generate the predicted fatalities for AGE
-# "[all]" ensures it calculates predictions across the full range of ages in your data
-eff_age <- ggpredict(glm_fatals_v3, terms = "AGE [all]")
+# Do predictor selection
+fatal_selection_table <- dredge(ztp_fatal_global, rank = "AIC")
 
-# 2. Plot using the standard statistical style (black line/grey ribbon)
-plot(eff_age, colors = "black") +
-  labs(
-    title = "Predicted Fatalities by Driver Age",
-    x = "Driver Age",
-    y = "Predicted Number of Fatalities"
-  ) +
-  theme_minimal()
+# Get best and summarize
+best_fatal_ztp_model <- get.models(fatal_selection_table, 1)[[1]]
+summary(best_fatal_ztp_model)
 
-# 3. Save the figure
-ggsave("figures/24a_predicted_fatalities_by_age.png")
+# convert to df and update model
+data_df <- as.data.frame(data_filtered_trimmed)
+best_fatal_ztp_model <- update(best_fatal_ztp_model, data = data_df)
 
-# Find fatalities by road type
-road_effect <- ggpredict(glm_fatals_v3, terms = "FUNC_SYS")
-road_df <- as.data.frame(road_effect)
+# Diagnostics
+sim_fatal <- simulateResiduals(fittedModel = best_fatal_ztp_model, plot = TRUE)
 
-ggplot(road_df, aes(x = x, y = predicted)) +
-  geom_point(size = 2.5, color = "black") +
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
-  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
-  scale_x_discrete(labels = road_labels) +
-  labs(
-    title = "Predicted Fatalities by Road Type",
-    x = "Road Type",
-    y = "Predicted Fatalities"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-ggsave("figures/25_predicted_fatalities_by_road_type.png")
+# Switch to ZTNB
+# Fatalities
+ztnb_fatal_full <- glmmTMB(
+  FATALS ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + WEATHER_GROUPED + AGE,
+  data = data_filtered_trimmed,
+  family = truncated_nbinom2(), # ZTNB Model
+  na.action = "na.fail"
+)
 
-# 2. Location (Rural vs Urban)
-eff_location <- ggpredict(glm_fatals_v3, terms = "RUR_URB")
-location_df <- as.data.frame(eff_location)
+# Diagnostics
+sim_fatal <- simulateResiduals(fittedModel = ztnb_fatal_full, plot = TRUE)
 
-ggplot(location_df, aes(x = x, y = predicted)) +
-  geom_point(size = 2.5, color = "black") +
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
-  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
-  scale_x_discrete(labels = c("1" = "Rural", "2" = "Urban")) +
-  labs(
-    title = "Predicted Fatalities by Location Type",
-    x = "Location",
-    y = "Predicted Fatalities"
-  ) +
-  theme_minimal()
-ggsave("figures/25a_predicted_fatalities_by_location.png")
+# Automated AIC selection
+fatal_ztnb_set <- dredge(ztnb_fatal_full, rank = "AIC")
+best_fatal_ztnb <- get.models(fatal_ztnb_set, 1)[[1]]
 
-# 3. Visualize the Effect of Extreme Weather
-weather_effect <- ggpredict(glm_fatals_v3, terms = "WEATHER_GROUPED")
+# Try ZTGP
+# Switch to generalized poisson (zero truncated)
+best_fatalities_ztgp <- glmmTMB(
+  FATALS ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + WEATHER_GROUPED + AGE,
+  data = data_filtered_trimmed,
+  family = truncated_genpois(),
+  na.action = "na.fail"
+)
 
-# Convert the ggeffects object into a standard R data frame
-weather_df <- as.data.frame(weather_effect)
+# Run Diagnostics
+sim_fatal_ztgp <- simulateResiduals(best_fatalities_ztgp, plot = TRUE)
 
-# Build the plot manually using native ggplot2
-ggplot(weather_df, aes(x = x, y = predicted)) +
-  geom_point(size = 2.5, color = "black") +
-  # width = 0.1 makes the horizontal caps on the error bars match the road plot
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.1, color = "black") +
-  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
-  labs(
-    title = "Predicted Fatalities by Weather Condition",
-    x = "Weather Condition",
-    y = "Predicted Fatalities"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-ggsave("figures/26_predicted_fatalities_by_weather.png")
+# Save
+png("figures/33_ztgp_fatal_diagnostics.png", width = 1000, height = 500)
+plot(sim_fatal_ztgp)
+dev.off()
 
+##########################################################################################################
 
-# Initial model
-glm_vehicles_full <- glm(
+##########################################################################################################
+
+##########################################################################################################
+
+##########################################################################################################
+
+##########################################################################################################
+
+# Initial model for vehicle involvement
+glm_vehicles_full = glm(
   VE_TOTAL ~ ns(TRAV_SP, df = 5) + FUNC_SYS + RUR_URB + LGT_COND + 
     WEATHER_GROUPED + DAY_WEEK + DRINKING, 
   data = data_filtered_trimmed, 
   family = "poisson"
 )
 
+# Find dispersion
+dispersion_poisson = sum(residuals(glm_vehicles_full, type = "pearson")^2) / glm_vehicles_full$df.residual
+print(dispersion_poisson)
 
-# trace = FALSE keeps the console output clean
-best_glm_vehicles <- stepAIC(glm_vehicles_full, direction = "both", trace = FALSE)
-
+# Do step AIC to find good initial model
+best_glm_vehicles = stepAIC(glm_vehicles_full, direction = "both", trace = FALSE)
 
 summary(best_glm_vehicles)
 
@@ -785,7 +788,7 @@ data_filtered_trimmed = data_filtered_trimmed %>%
     LGT_COND = droplevels(LGT_COND)
   )
 
-# Re-run model
+# Re-run model, now using quasipoisson
 glm_vehicles_final = glm(
   VE_TOTAL ~ ns(TRAV_SP, df = 5) + FUNC_SYS + RUR_URB + 
     LGT_COND + WEATHER_GROUPED + DRINKING, 
@@ -796,21 +799,273 @@ glm_vehicles_final = glm(
 # Give summary
 summary(glm_vehicles_final)
 
-# 1. Marginal Effect of Speed (Natural Spline)
-eff_speed = ggpredict(glm_vehicles_final, terms = "TRAV_SP [all]")
-plot(eff_speed, colors = "black") + 
+# Fit the 'Global' ZTP model
+# family = truncated_poisson(link = "log")
+ztp_vehicles_full = glmmTMB(
+  VE_TOTAL ~ ns(TRAV_SP, df = 5) + FUNC_SYS + RUR_URB + LGT_COND + WEATHER_GROUPED + DRINKING,
+  data = data_filtered_trimmed,
+  family = truncated_poisson(),
+  na.action = "na.fail"
+)
+
+# Automated model selection (All possible combinations)
+ztp_vehicles_model_set = dredge(ztp_vehicles_full, rank="AIC")
+ztp_vehicles_best_model = get.models(ztp_vehicles_model_set, 1)[[1]]
+summary(ztp_vehicles_best_model)
+
+# Run diagnostics
+sim_vehicles <- simulateResiduals(fittedModel = ztp_vehicles_best_model, plot = TRUE)
+
+# Vehicles
+ztnb_vehicles_full <- glmmTMB(
+  VE_TOTAL ~ ns(TRAV_SP, df = 5) + RUR_URB*DRINKING + FUNC_SYS + RUR_URB + LGT_COND + WEATHER_GROUPED + DRINKING,
+  data = data_filtered_trimmed,
+  family = truncated_nbinom2(), # ZTNB Model
+  na.action = "na.fail"
+)
+
+# Automated AIC selection
+veh_ztnb_set <- dredge(ztnb_vehicles_full, rank = "AIC")
+best_veh_ztnb <- get.models(veh_ztnb_set, 1)[[1]]
+
+# Diagnostics
+sim_vehicles <- simulateResiduals(fittedModel = best_veh_ztnb, plot = TRUE)
+
+# Switch to generalized poisson (zero truncated)
+best_vehicles_ztgp <- glmmTMB(
+  VE_TOTAL ~ ns(TRAV_SP, df = 5) + FUNC_SYS + RUR_URB + LGT_COND + WEATHER_GROUPED + DRINKING,
+  data = data_filtered_trimmed,
+  family = truncated_genpois(),
+  na.action = "na.fail"
+)
+
+# Run Diagnostics
+data_clean <- as.data.frame(data_filtered_trimmed)
+best_vehicles_ztgp <- update(best_vehicles_ztgp, data = data_clean)
+sim_veh_ztgp <- simulateResiduals(best_vehicles_ztgp, plot = TRUE)
+
+# Save
+png("figures/34_ztgp_vehicles_diagnostics.png", width = 1000, height = 500)
+plot(sim_veh_ztgp)
+dev.off()
+
+##########################################################################################################
+
+##########################################################################################################
+
+##########################################################################################################
+
+##########################################################################################################
+
+##########################################################################################################
+
+# (Intercept) = Interstate
+# FUNC_SYS2   = Arterial-Freeway
+# FUNC_SYS3   = Arterial-Other
+# FUNC_SYS4   = Minor Arterial
+# FUNC_SYS5   = Major Collector
+# FUNC_SYS6   = Minor Collector
+# FUNC_SYS7   = Local
+
+# best_vehicles_ztgp
+summary(best_vehicles_ztgp)
+fixef(best_vehicles_ztgp)
+confint(best_vehicles_ztgp)
+
+# Manual McFadden's R^2
+ll_full <- as.numeric(logLik(best_vehicles_ztgp))
+
+# Null model (Intercept only) 
+null_model <- glmmTMB(
+  VE_TOTAL ~ 1, 
+  data = data_clean, 
+  family = truncated_genpois()
+)
+ll_null <- as.numeric(logLik(null_model))
+
+# McFadden's R^2
+r2_mcfadden <- 1 - (ll_full / ll_null)
+print(r2_mcfadden)
+
+# best_fatalities_ztgp
+summary(best_fatalities_ztgp)
+fixef(best_fatalities_ztgp)
+confint(best_fatalities_ztgp)
+
+# Manual McFadden's R^2
+ll_full <- as.numeric(logLik(best_fatalities_ztgp))
+
+# Null model (Intercept only)
+null_model <- glmmTMB(
+  FATALS ~ 1, 
+  data = data_clean, 
+  family = truncated_genpois()
+)
+ll_null <- as.numeric(logLik(null_model))
+
+# McFadden's R^2
+r2_mcfadden <- 1 - (ll_full / ll_null)
+print(r2_mcfadden)
+
+##########################################################################################################
+
+##########################################################################################################
+
+##########################################################################################################
+
+##########################################################################################################
+
+##########################################################################################################
+
+# Find speed vs. fatalities
+best_fatalities_ztgp <- update(best_fatalities_ztgp, data = data_clean)
+#speed_effect = ggpredict(best_fatalities_ztgp, terms = "TRAV_SP [all]", type = "count") 
+
+speed_effect_raw <- ggpredict(best_fatalities_ztgp, terms = "TRAV_SP [all]", type = "count")
+speed_df <- as.data.frame(speed_effect_raw)
+
+# Converts latent lambda to E[Y | Y > 0] = lambda / (1 - exp(-lambda))
+speed_df$predicted <- speed_df$predicted / (1 - exp(-speed_df$predicted))
+speed_df$conf.low  <- speed_df$conf.low  / (1 - exp(-speed_df$conf.low))
+speed_df$conf.high <- speed_df$conf.high / (1 - exp(-speed_df$conf.high))
+
+ggplot(speed_df, aes(x = x, y = predicted)) +
+  geom_line(color = "black", size = 1) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, fill = "gray") +
+  labs(
+    title = "Predicted Fatalities by Speed",
+    x = "Travel Speed (mph)",
+    y = "Expected Number of Fatalities"
+  ) +
+  theme_minimal()
+ggsave("figures/24_predicted_fatalities_by_speed.png")
+
+# Generate the predicted fatalities for age
+eff_age_raw = ggpredict(best_fatal_ztp_model, terms = "AGE [all]", type = "count")
+eff_age_df = as.data.frame(eff_age_raw)
+
+# Apply correction
+eff_age_df$predicted <- eff_age_df$predicted / (1 - exp(-eff_age_df$predicted))
+eff_age_df$conf.low  <- eff_age_df$conf.low  / (1 - exp(-eff_age_df$conf.low))
+eff_age_df$conf.high <- eff_age_df$conf.high / (1 - exp(-eff_age_df$conf.high))
+
+# Plot
+ggplot(eff_age_df, aes(x = x, y = predicted)) +
+  geom_line(color = "black", size = 1) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, fill = "gray") +
+  labs(
+    title = "Predicted Fatalities by Driver Age",
+    x = "Driver Age",
+    y = "Expected Number of Fatalities"
+  ) +
+  theme_minimal()
+ggsave("figures/24a_predicted_fatalities_by_age.png")
+
+# Find fatalities by road type
+road_effect_raw = ggpredict(best_fatalities_ztgp, terms = "FUNC_SYS", type = "count")
+road_df = as.data.frame(road_effect_raw)
+
+# Correction
+road_df$predicted <- road_df$predicted / (1 - exp(-road_df$predicted))
+road_df$conf.low  <- road_df$conf.low  / (1 - exp(-road_df$conf.low))
+road_df$conf.high <- road_df$conf.high / (1 - exp(-road_df$conf.high))
+
+# Plot
+ggplot(road_df, aes(x = x, y = predicted)) +
+  geom_point(size = 2.5, color = "black") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
+  scale_x_discrete(labels = road_labels) +
+  labs(
+    title = "Predicted Fatalities by Road Type",
+    x = "Road Type",
+    y = "Expected Number of Fatalities"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+ggsave("figures/25_predicted_fatalities_by_road_type.png")
+
+# Predict fatalities by rur/urb
+eff_location_raw = ggpredict(best_fatalities_ztgp, terms = "RUR_URB", type = "count")
+location_df = as.data.frame(eff_location_raw)
+
+# Correction
+location_df$predicted <- location_df$predicted / (1 - exp(-location_df$predicted))
+location_df$conf.low  <- location_df$conf.low  / (1 - exp(-location_df$conf.low))
+location_df$conf.high <- location_df$conf.high / (1 - exp(-location_df$conf.high))
+
+# Plot
+ggplot(location_df, aes(x = x, y = predicted)) +
+  geom_point(size = 2.5, color = "black") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
+  scale_x_discrete(labels = c("1" = "Rural", "2" = "Urban")) +
+  labs(
+    title = "Predicted Fatalities by Location Type",
+    x = "Location",
+    y = "Expected Number of Fatalities"
+  ) +
+  theme_minimal()
+ggsave("figures/25a_predicted_fatalities_by_location.png")
+
+# Predict effects of weather groups
+weather_effect_raw = ggpredict(best_fatalities_ztgp, terms = "WEATHER_GROUPED", type = "count")
+weather_df = as.data.frame(weather_effect_raw)
+
+# Correction
+weather_df$predicted <- weather_df$predicted / (1 - exp(-weather_df$predicted))
+weather_df$conf.low  <- weather_df$conf.low  / (1 - exp(-weather_df$conf.low))
+weather_df$conf.high <- weather_df$conf.high / (1 - exp(-weather_df$conf.high))
+
+# Plot
+ggplot(weather_df, aes(x = x, y = predicted)) +
+  geom_point(size = 2.5, color = "black") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.1, color = "black") +
+  geom_text(aes(label = round(predicted, 3)), hjust = 1.3, fontface = "bold") +
+  labs(
+    title = "Predicted Fatalities by Weather Condition",
+    x = "Weather Condition",
+    y = "Expected Number of Fatalities"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+ggsave("figures/26_predicted_fatalities_by_weather.png")
+
+# Plot vehicle involvement vs speed (pred)
+eff_speed_raw = ggpredict(best_vehicles_ztgp, terms = "TRAV_SP [all]", type = "count")
+eff_speed_df = as.data.frame(eff_speed_raw)
+
+# Correction
+eff_speed_df$predicted <- eff_speed_df$predicted / (1 - exp(-eff_speed_df$predicted))
+eff_speed_df$conf.low  <- eff_speed_df$conf.low  / (1 - exp(-eff_speed_df$conf.low))
+eff_speed_df$conf.high <- eff_speed_df$conf.high / (1 - exp(-eff_speed_df$conf.high))
+
+# Plot
+ggplot(eff_speed_df, aes(x = x, y = predicted)) +
+  geom_line(color = "black", size = 1) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, fill = "gray") +
   labs(
     title = "Effect of Speed on Vehicle Involvement",
-    x = "Travel Speed (mph)", 
-    y = "Predicted Number of Vehicles"
+    x = "Travel Speed (mph)",
+    y = "Expected Number of Vehicles"
   ) +
   theme_minimal()
 ggsave("figures/27_effect_speed_on_vehicles.png")
 
-# 1. Road Classification (FUNC_SYS)
-eff_road = ggpredict(glm_vehicles_final, terms = "FUNC_SYS")
-road_df = as.data.frame(eff_road)
+# Predict vehicle involvement by road type
+eff_road_raw = ggpredict(best_vehicles_ztgp, terms = "FUNC_SYS", type = "count")
+road_df = as.data.frame(eff_road_raw)
 
+# Correction
+road_df$predicted <- road_df$predicted / (1 - exp(-road_df$predicted))
+road_df$conf.low  <- road_df$conf.low  / (1 - exp(-road_df$conf.low))
+road_df$conf.high <- road_df$conf.high / (1 - exp(-road_df$conf.high))
+
+# Plot
 ggplot(road_df, aes(x = x, y = predicted)) +
   geom_point(size = 2.5, color = "black") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
@@ -819,16 +1074,22 @@ ggplot(road_df, aes(x = x, y = predicted)) +
   labs(
     title = "Predicted Vehicles by Road Type",
     x = "Road Type",
-    y = "Predicted Vehicles"
+    y = "Expected Number of Vehicles"
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave("figures/28_predicted_vehicles_by_road_type.png")
 
-# 2. Location (Rural vs Urban)
-eff_location <- ggpredict(glm_vehicles_final, terms = "RUR_URB")
-location_df <- as.data.frame(eff_location)
+# Predict by location for vehicle involvement
+eff_location_raw = ggpredict(best_vehicles_ztgp, terms = "RUR_URB", type = "count")
+location_df = as.data.frame(eff_location_raw)
 
+# Correction
+location_df$predicted <- location_df$predicted / (1 - exp(-location_df$predicted))
+location_df$conf.low  <- location_df$conf.low  / (1 - exp(-location_df$conf.low))
+location_df$conf.high <- location_df$conf.high / (1 - exp(-location_df$conf.high))
+
+# Plot
 ggplot(location_df, aes(x = x, y = predicted)) +
   geom_point(size = 2.5, color = "black") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
@@ -837,15 +1098,21 @@ ggplot(location_df, aes(x = x, y = predicted)) +
   labs(
     title = "Predicted Vehicles by Location Type",
     x = "Location",
-    y = "Predicted Vehicles"
+    y = "Expected Number of Vehicles"
   ) +
   theme_minimal()
 ggsave("figures/29_predicted_vehicles_by_location.png")
 
-# 3. Lighting Condition (LGT_COND)
-eff_light <- ggpredict(glm_vehicles_final, terms = "LGT_COND")
-light_df <- as.data.frame(eff_light)
+# Predict vehicle involvement with lighting conditions
+eff_light_raw = ggpredict(best_vehicles_ztgp, terms = "LGT_COND", type = "count")
+light_df = as.data.frame(eff_light_raw)
 
+# Correction
+light_df$predicted <- light_df$predicted / (1 - exp(-light_df$predicted))
+light_df$conf.low  <- light_df$conf.low  / (1 - exp(-light_df$conf.low))
+light_df$conf.high <- light_df$conf.high / (1 - exp(-light_df$conf.high))
+
+# Plot
 ggplot(light_df, aes(x = reorder(x, -predicted), y = predicted)) +
   geom_point(size = 2.5, color = "black") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
@@ -853,16 +1120,22 @@ ggplot(light_df, aes(x = reorder(x, -predicted), y = predicted)) +
   labs(
     title = "Predicted Vehicles by Lighting Condition",
     x = "Lighting",
-    y = "Predicted Vehicles"
+    y = "Expected Number of Vehicles"
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave("figures/30_predicted_vehicles_by_lighting.png")
 
-# 4. Weather Group (WEATHER_GROUPED)
-eff_weather <- ggpredict(glm_vehicles_final, terms = "WEATHER_GROUPED")
-weather_df <- as.data.frame(eff_weather)
+# Predict vehicle involvement based on weather conditions
+eff_weather_raw = ggpredict(best_vehicles_ztgp, terms = "WEATHER_GROUPED", type = "count")
+weather_df = as.data.frame(eff_weather_raw)
 
+# Correction
+weather_df$predicted <- weather_df$predicted / (1 - exp(-weather_df$predicted))
+weather_df$conf.low  <- weather_df$conf.low  / (1 - exp(-weather_df$conf.low))
+weather_df$conf.high <- weather_df$conf.high / (1 - exp(-weather_df$conf.high))
+
+# Plot
 ggplot(weather_df, aes(x = reorder(x, -predicted), y = predicted)) +
   geom_point(size = 2.5, color = "black") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
@@ -870,16 +1143,22 @@ ggplot(weather_df, aes(x = reorder(x, -predicted), y = predicted)) +
   labs(
     title = "Predicted Vehicles by Weather Condition",
     x = "Weather Group",
-    y = "Predicted Vehicles"
+    y = "Expected Number of Vehicles"
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave("figures/31_predicted_vehicles_by_weather.png")
 
-# 5. Alcohol Involvement (DRINKING)
-eff_alcohol <- ggpredict(glm_vehicles_final, terms = "DRINKING")
-alcohol_df <- as.data.frame(eff_alcohol)
+# Predict vehicle involvement based on drinking
+eff_alcohol_raw = ggpredict(best_vehicles_ztgp, terms = "DRINKING", type = "count")
+alcohol_df = as.data.frame(eff_alcohol_raw)
 
+# Correction
+alcohol_df$predicted <- alcohol_df$predicted / (1 - exp(-alcohol_df$predicted))
+alcohol_df$conf.low  <- alcohol_df$conf.low  / (1 - exp(-alcohol_df$conf.low))
+alcohol_df$conf.high <- alcohol_df$conf.high / (1 - exp(-alcohol_df$conf.high))
+
+# Plot
 ggplot(alcohol_df, aes(x = x, y = predicted)) +
   geom_point(size = 2.5, color = "black") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
@@ -887,7 +1166,7 @@ ggplot(alcohol_df, aes(x = x, y = predicted)) +
   labs(
     title = "Predicted Vehicles by Alcohol Involvement",
     x = "Drinking Status",
-    y = "Predicted Vehicles"
+    y = "Expected Number of Vehicles"
   ) +
   theme_minimal()
 ggsave("figures/32_predicted_vehicles_by_alcohol.png")
