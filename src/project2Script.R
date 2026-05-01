@@ -738,7 +738,7 @@ best_fatal_ztnb <- get.models(fatal_ztnb_set, 1)[[1]]
 # Try ZTGP
 # Switch to generalized poisson (zero truncated)
 best_fatalities_ztgp <- glmmTMB(
-  FATALS ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + WEATHER_GROUPED + AGE,
+  FATALS ~ ns(TRAV_SP, df = 3) + FUNC_SYS + RUR_URB + WEATHER_GROUPED + AGE,
   data = data_filtered_trimmed,
   family = truncated_genpois(),
   na.action = "na.fail"
@@ -833,7 +833,7 @@ sim_vehicles <- simulateResiduals(fittedModel = best_veh_ztnb, plot = TRUE)
 
 # Switch to generalized poisson (zero truncated)
 best_vehicles_ztgp <- glmmTMB(
-  VE_TOTAL ~ ns(TRAV_SP, df = 5) + FUNC_SYS + RUR_URB + LGT_COND + WEATHER_GROUPED + DRINKING,
+  VE_TOTAL ~ ns(TRAV_SP, df = 3) + FUNC_SYS + RUR_URB + LGT_COND + WEATHER_GROUPED + DRINKING,
   data = data_filtered_trimmed,
   family = truncated_genpois(),
   na.action = "na.fail"
@@ -1049,12 +1049,12 @@ ggplot(eff_speed_df, aes(x = x, y = predicted)) +
   geom_line(color = "black", size = 1) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, fill = "gray") +
   labs(
-    title = "Effect of Speed on Vehicle Involvement",
+    title = "Predicted Vehicles vs. Speed",
     x = "Travel Speed (mph)",
     y = "Expected Number of Vehicles"
   ) +
   theme_minimal()
-ggsave("figures/27_effect_speed_on_vehicles.png")
+ggsave("figures/27_predicted_vehicles_by_speed.png")
 
 # Predict vehicle involvement by road type
 eff_road_raw = ggpredict(best_vehicles_ztgp, terms = "FUNC_SYS", type = "count")
