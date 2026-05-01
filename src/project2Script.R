@@ -818,7 +818,7 @@ sim_vehicles <- simulateResiduals(fittedModel = ztp_vehicles_best_model, plot = 
 
 # Vehicles
 ztnb_vehicles_full <- glmmTMB(
-  VE_TOTAL ~ ns(TRAV_SP, df = 5) + RUR_URB*DRINKING + FUNC_SYS + RUR_URB + LGT_COND + WEATHER_GROUPED + DRINKING,
+  VE_TOTAL ~ ns(TRAV_SP, df = 5) + FUNC_SYS + RUR_URB + LGT_COND + WEATHER_GROUPED + DRINKING,
   data = data_filtered_trimmed,
   family = truncated_nbinom2(), # ZTNB Model
   na.action = "na.fail"
