@@ -698,7 +698,7 @@ glm_fatals_v3 = glm(
 summary(glm_fatals_v3)
 
 # Make ZTP model
-ztp_fatal_global <- glmmTMB(
+ztp_fatal_global = glmmTMB(
   FATALS ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + WEATHER_GROUPED + AGE,
   data = data_filtered_trimmed,
   family = truncated_poisson(link = "log"),
@@ -706,22 +706,22 @@ ztp_fatal_global <- glmmTMB(
 )
 
 # Do predictor selection
-fatal_selection_table <- dredge(ztp_fatal_global, rank = "AIC")
+fatal_selection_table = dredge(ztp_fatal_global, rank = "AIC")
 
 # Get best and summarize
-best_fatal_ztp_model <- get.models(fatal_selection_table, 1)[[1]]
+best_fatal_ztp_model = get.models(fatal_selection_table, 1)[[1]]
 summary(best_fatal_ztp_model)
 
 # convert to df and update model
-data_df <- as.data.frame(data_filtered_trimmed)
-best_fatal_ztp_model <- update(best_fatal_ztp_model, data = data_df)
+data_df = as.data.frame(data_filtered_trimmed)
+best_fatal_ztp_model = update(best_fatal_ztp_model, data = data_df)
 
 # Diagnostics
-sim_fatal <- simulateResiduals(fittedModel = best_fatal_ztp_model, plot = TRUE)
+sim_fatal = simulateResiduals(fittedModel = best_fatal_ztp_model, plot = TRUE)
 
 # Switch to ZTNB
 # Fatalities
-ztnb_fatal_full <- glmmTMB(
+ztnb_fatal_full = glmmTMB(
   FATALS ~ ns(TRAV_SP, df = 4) + FUNC_SYS + RUR_URB + WEATHER_GROUPED + AGE,
   data = data_filtered_trimmed,
   family = truncated_nbinom2(), # ZTNB Model
@@ -729,15 +729,15 @@ ztnb_fatal_full <- glmmTMB(
 )
 
 # Diagnostics
-sim_fatal <- simulateResiduals(fittedModel = ztnb_fatal_full, plot = TRUE)
+sim_fatal = simulateResiduals(fittedModel = ztnb_fatal_full, plot = TRUE)
 
 # Automated AIC selection
-fatal_ztnb_set <- dredge(ztnb_fatal_full, rank = "AIC")
-best_fatal_ztnb <- get.models(fatal_ztnb_set, 1)[[1]]
+fatal_ztnb_set = dredge(ztnb_fatal_full, rank = "AIC")
+best_fatal_ztnb = get.models(fatal_ztnb_set, 1)[[1]]
 
 # Try ZTGP
 # Switch to generalized poisson (zero truncated)
-best_fatalities_ztgp <- glmmTMB(
+best_fatalities_ztgp = glmmTMB(
   FATALS ~ ns(TRAV_SP, df = 3) + FUNC_SYS + RUR_URB + WEATHER_GROUPED + AGE,
   data = data_filtered_trimmed,
   family = truncated_genpois(),
@@ -745,7 +745,7 @@ best_fatalities_ztgp <- glmmTMB(
 )
 
 # Run Diagnostics
-sim_fatal_ztgp <- simulateResiduals(best_fatalities_ztgp, plot = TRUE)
+sim_fatal_ztgp = simulateResiduals(best_fatalities_ztgp, plot = TRUE)
 
 # Save
 png("figures/33_ztgp_fatal_diagnostics.png", width = 1000, height = 500)
@@ -814,10 +814,10 @@ ztp_vehicles_best_model = get.models(ztp_vehicles_model_set, 1)[[1]]
 summary(ztp_vehicles_best_model)
 
 # Run diagnostics
-sim_vehicles <- simulateResiduals(fittedModel = ztp_vehicles_best_model, plot = TRUE)
+sim_vehicles = simulateResiduals(fittedModel = ztp_vehicles_best_model, plot = TRUE)
 
 # Vehicles
-ztnb_vehicles_full <- glmmTMB(
+ztnb_vehicles_full = glmmTMB(
   VE_TOTAL ~ ns(TRAV_SP, df = 5) + FUNC_SYS + RUR_URB + LGT_COND + WEATHER_GROUPED + DRINKING,
   data = data_filtered_trimmed,
   family = truncated_nbinom2(), # ZTNB Model
@@ -825,14 +825,14 @@ ztnb_vehicles_full <- glmmTMB(
 )
 
 # Automated AIC selection
-veh_ztnb_set <- dredge(ztnb_vehicles_full, rank = "AIC")
-best_veh_ztnb <- get.models(veh_ztnb_set, 1)[[1]]
+veh_ztnb_set = dredge(ztnb_vehicles_full, rank = "AIC")
+best_veh_ztnb = get.models(veh_ztnb_set, 1)[[1]]
 
 # Diagnostics
-sim_vehicles <- simulateResiduals(fittedModel = best_veh_ztnb, plot = TRUE)
+sim_vehicles = simulateResiduals(fittedModel = best_veh_ztnb, plot = TRUE)
 
 # Switch to generalized poisson (zero truncated)
-best_vehicles_ztgp <- glmmTMB(
+best_vehicles_ztgp = glmmTMB(
   VE_TOTAL ~ ns(TRAV_SP, df = 3) + FUNC_SYS + RUR_URB + LGT_COND + WEATHER_GROUPED + DRINKING,
   data = data_filtered_trimmed,
   family = truncated_genpois(),
@@ -840,9 +840,9 @@ best_vehicles_ztgp <- glmmTMB(
 )
 
 # Run Diagnostics
-data_clean <- as.data.frame(data_filtered_trimmed)
-best_vehicles_ztgp <- update(best_vehicles_ztgp, data = data_clean)
-sim_veh_ztgp <- simulateResiduals(best_vehicles_ztgp, plot = TRUE)
+data_clean = as.data.frame(data_filtered_trimmed)
+best_vehicles_ztgp = update(best_vehicles_ztgp, data = data_clean)
+sim_veh_ztgp = simulateResiduals(best_vehicles_ztgp, plot = TRUE)
 
 # Save
 png("figures/34_ztgp_vehicles_diagnostics.png", width = 1000, height = 500)
@@ -873,18 +873,18 @@ fixef(best_vehicles_ztgp)
 confint(best_vehicles_ztgp)
 
 # Manual McFadden's R^2
-ll_full <- as.numeric(logLik(best_vehicles_ztgp))
+ll_full = as.numeric(logLik(best_vehicles_ztgp))
 
 # Null model (Intercept only) 
-null_model <- glmmTMB(
+null_model = glmmTMB(
   VE_TOTAL ~ 1, 
   data = data_clean, 
   family = truncated_genpois()
 )
-ll_null <- as.numeric(logLik(null_model))
+ll_null = as.numeric(logLik(null_model))
 
 # McFadden's R^2
-r2_mcfadden <- 1 - (ll_full / ll_null)
+r2_mcfadden = 1 - (ll_full / ll_null)
 print(r2_mcfadden)
 
 # best_fatalities_ztgp
@@ -893,18 +893,18 @@ fixef(best_fatalities_ztgp)
 confint(best_fatalities_ztgp)
 
 # Manual McFadden's R^2
-ll_full <- as.numeric(logLik(best_fatalities_ztgp))
+ll_full = as.numeric(logLik(best_fatalities_ztgp))
 
 # Null model (Intercept only)
-null_model <- glmmTMB(
+null_model = glmmTMB(
   FATALS ~ 1, 
   data = data_clean, 
   family = truncated_genpois()
 )
-ll_null <- as.numeric(logLik(null_model))
+ll_null = as.numeric(logLik(null_model))
 
 # McFadden's R^2
-r2_mcfadden <- 1 - (ll_full / ll_null)
+r2_mcfadden = 1 - (ll_full / ll_null)
 print(r2_mcfadden)
 
 ##########################################################################################################
@@ -918,16 +918,16 @@ print(r2_mcfadden)
 ##########################################################################################################
 
 # Find speed vs. fatalities
-best_fatalities_ztgp <- update(best_fatalities_ztgp, data = data_clean)
+best_fatalities_ztgp = update(best_fatalities_ztgp, data = data_clean)
 #speed_effect = ggpredict(best_fatalities_ztgp, terms = "TRAV_SP [all]", type = "count") 
 
-speed_effect_raw <- ggpredict(best_fatalities_ztgp, terms = "TRAV_SP [all]", type = "count")
-speed_df <- as.data.frame(speed_effect_raw)
+speed_effect_raw = ggpredict(best_fatalities_ztgp, terms = "TRAV_SP [all]", type = "count")
+speed_df = as.data.frame(speed_effect_raw)
 
 # Converts latent lambda to E[Y | Y > 0] = lambda / (1 - exp(-lambda))
-speed_df$predicted <- speed_df$predicted / (1 - exp(-speed_df$predicted))
-speed_df$conf.low  <- speed_df$conf.low  / (1 - exp(-speed_df$conf.low))
-speed_df$conf.high <- speed_df$conf.high / (1 - exp(-speed_df$conf.high))
+speed_df$predicted = speed_df$predicted / (1 - exp(-speed_df$predicted))
+speed_df$conf.low  = speed_df$conf.low  / (1 - exp(-speed_df$conf.low))
+speed_df$conf.high = speed_df$conf.high / (1 - exp(-speed_df$conf.high))
 
 ggplot(speed_df, aes(x = x, y = predicted)) +
   geom_line(color = "black", size = 1) +
@@ -945,9 +945,9 @@ eff_age_raw = ggpredict(best_fatal_ztp_model, terms = "AGE [all]", type = "count
 eff_age_df = as.data.frame(eff_age_raw)
 
 # Apply correction
-eff_age_df$predicted <- eff_age_df$predicted / (1 - exp(-eff_age_df$predicted))
-eff_age_df$conf.low  <- eff_age_df$conf.low  / (1 - exp(-eff_age_df$conf.low))
-eff_age_df$conf.high <- eff_age_df$conf.high / (1 - exp(-eff_age_df$conf.high))
+eff_age_df$predicted = eff_age_df$predicted / (1 - exp(-eff_age_df$predicted))
+eff_age_df$conf.low  = eff_age_df$conf.low  / (1 - exp(-eff_age_df$conf.low))
+eff_age_df$conf.high = eff_age_df$conf.high / (1 - exp(-eff_age_df$conf.high))
 
 # Plot
 ggplot(eff_age_df, aes(x = x, y = predicted)) +
@@ -966,9 +966,9 @@ road_effect_raw = ggpredict(best_fatalities_ztgp, terms = "FUNC_SYS", type = "co
 road_df = as.data.frame(road_effect_raw)
 
 # Correction
-road_df$predicted <- road_df$predicted / (1 - exp(-road_df$predicted))
-road_df$conf.low  <- road_df$conf.low  / (1 - exp(-road_df$conf.low))
-road_df$conf.high <- road_df$conf.high / (1 - exp(-road_df$conf.high))
+road_df$predicted = road_df$predicted / (1 - exp(-road_df$predicted))
+road_df$conf.low  = road_df$conf.low  / (1 - exp(-road_df$conf.low))
+road_df$conf.high = road_df$conf.high / (1 - exp(-road_df$conf.high))
 
 # Plot
 ggplot(road_df, aes(x = x, y = predicted)) +
@@ -992,9 +992,9 @@ eff_location_raw = ggpredict(best_fatalities_ztgp, terms = "RUR_URB", type = "co
 location_df = as.data.frame(eff_location_raw)
 
 # Correction
-location_df$predicted <- location_df$predicted / (1 - exp(-location_df$predicted))
-location_df$conf.low  <- location_df$conf.low  / (1 - exp(-location_df$conf.low))
-location_df$conf.high <- location_df$conf.high / (1 - exp(-location_df$conf.high))
+location_df$predicted = location_df$predicted / (1 - exp(-location_df$predicted))
+location_df$conf.low  = location_df$conf.low  / (1 - exp(-location_df$conf.low))
+location_df$conf.high = location_df$conf.high / (1 - exp(-location_df$conf.high))
 
 # Plot
 ggplot(location_df, aes(x = x, y = predicted)) +
@@ -1015,9 +1015,9 @@ weather_effect_raw = ggpredict(best_fatalities_ztgp, terms = "WEATHER_GROUPED", 
 weather_df = as.data.frame(weather_effect_raw)
 
 # Correction
-weather_df$predicted <- weather_df$predicted / (1 - exp(-weather_df$predicted))
-weather_df$conf.low  <- weather_df$conf.low  / (1 - exp(-weather_df$conf.low))
-weather_df$conf.high <- weather_df$conf.high / (1 - exp(-weather_df$conf.high))
+weather_df$predicted = weather_df$predicted / (1 - exp(-weather_df$predicted))
+weather_df$conf.low  = weather_df$conf.low  / (1 - exp(-weather_df$conf.low))
+weather_df$conf.high = weather_df$conf.high / (1 - exp(-weather_df$conf.high))
 
 # Plot
 ggplot(weather_df, aes(x = x, y = predicted)) +
@@ -1040,9 +1040,9 @@ eff_speed_raw = ggpredict(best_vehicles_ztgp, terms = "TRAV_SP [all]", type = "c
 eff_speed_df = as.data.frame(eff_speed_raw)
 
 # Correction
-eff_speed_df$predicted <- eff_speed_df$predicted / (1 - exp(-eff_speed_df$predicted))
-eff_speed_df$conf.low  <- eff_speed_df$conf.low  / (1 - exp(-eff_speed_df$conf.low))
-eff_speed_df$conf.high <- eff_speed_df$conf.high / (1 - exp(-eff_speed_df$conf.high))
+eff_speed_df$predicted = eff_speed_df$predicted / (1 - exp(-eff_speed_df$predicted))
+eff_speed_df$conf.low  = eff_speed_df$conf.low  / (1 - exp(-eff_speed_df$conf.low))
+eff_speed_df$conf.high = eff_speed_df$conf.high / (1 - exp(-eff_speed_df$conf.high))
 
 # Plot
 ggplot(eff_speed_df, aes(x = x, y = predicted)) +
@@ -1061,9 +1061,9 @@ eff_road_raw = ggpredict(best_vehicles_ztgp, terms = "FUNC_SYS", type = "count")
 road_df = as.data.frame(eff_road_raw)
 
 # Correction
-road_df$predicted <- road_df$predicted / (1 - exp(-road_df$predicted))
-road_df$conf.low  <- road_df$conf.low  / (1 - exp(-road_df$conf.low))
-road_df$conf.high <- road_df$conf.high / (1 - exp(-road_df$conf.high))
+road_df$predicted = road_df$predicted / (1 - exp(-road_df$predicted))
+road_df$conf.low  = road_df$conf.low  / (1 - exp(-road_df$conf.low))
+road_df$conf.high = road_df$conf.high / (1 - exp(-road_df$conf.high))
 
 # Plot
 ggplot(road_df, aes(x = x, y = predicted)) +
@@ -1085,9 +1085,9 @@ eff_location_raw = ggpredict(best_vehicles_ztgp, terms = "RUR_URB", type = "coun
 location_df = as.data.frame(eff_location_raw)
 
 # Correction
-location_df$predicted <- location_df$predicted / (1 - exp(-location_df$predicted))
-location_df$conf.low  <- location_df$conf.low  / (1 - exp(-location_df$conf.low))
-location_df$conf.high <- location_df$conf.high / (1 - exp(-location_df$conf.high))
+location_df$predicted = location_df$predicted / (1 - exp(-location_df$predicted))
+location_df$conf.low  = location_df$conf.low  / (1 - exp(-location_df$conf.low))
+location_df$conf.high = location_df$conf.high / (1 - exp(-location_df$conf.high))
 
 # Plot
 ggplot(location_df, aes(x = x, y = predicted)) +
@@ -1108,9 +1108,9 @@ eff_light_raw = ggpredict(best_vehicles_ztgp, terms = "LGT_COND", type = "count"
 light_df = as.data.frame(eff_light_raw)
 
 # Correction
-light_df$predicted <- light_df$predicted / (1 - exp(-light_df$predicted))
-light_df$conf.low  <- light_df$conf.low  / (1 - exp(-light_df$conf.low))
-light_df$conf.high <- light_df$conf.high / (1 - exp(-light_df$conf.high))
+light_df$predicted = light_df$predicted / (1 - exp(-light_df$predicted))
+light_df$conf.low  = light_df$conf.low  / (1 - exp(-light_df$conf.low))
+light_df$conf.high = light_df$conf.high / (1 - exp(-light_df$conf.high))
 
 # Plot
 ggplot(light_df, aes(x = reorder(x, -predicted), y = predicted)) +
@@ -1131,9 +1131,9 @@ eff_weather_raw = ggpredict(best_vehicles_ztgp, terms = "WEATHER_GROUPED", type 
 weather_df = as.data.frame(eff_weather_raw)
 
 # Correction
-weather_df$predicted <- weather_df$predicted / (1 - exp(-weather_df$predicted))
-weather_df$conf.low  <- weather_df$conf.low  / (1 - exp(-weather_df$conf.low))
-weather_df$conf.high <- weather_df$conf.high / (1 - exp(-weather_df$conf.high))
+weather_df$predicted = weather_df$predicted / (1 - exp(-weather_df$predicted))
+weather_df$conf.low  = weather_df$conf.low  / (1 - exp(-weather_df$conf.low))
+weather_df$conf.high = weather_df$conf.high / (1 - exp(-weather_df$conf.high))
 
 # Plot
 ggplot(weather_df, aes(x = reorder(x, -predicted), y = predicted)) +
@@ -1154,9 +1154,9 @@ eff_alcohol_raw = ggpredict(best_vehicles_ztgp, terms = "DRINKING", type = "coun
 alcohol_df = as.data.frame(eff_alcohol_raw)
 
 # Correction
-alcohol_df$predicted <- alcohol_df$predicted / (1 - exp(-alcohol_df$predicted))
-alcohol_df$conf.low  <- alcohol_df$conf.low  / (1 - exp(-alcohol_df$conf.low))
-alcohol_df$conf.high <- alcohol_df$conf.high / (1 - exp(-alcohol_df$conf.high))
+alcohol_df$predicted = alcohol_df$predicted / (1 - exp(-alcohol_df$predicted))
+alcohol_df$conf.low  = alcohol_df$conf.low  / (1 - exp(-alcohol_df$conf.low))
+alcohol_df$conf.high = alcohol_df$conf.high / (1 - exp(-alcohol_df$conf.high))
 
 # Plot
 ggplot(alcohol_df, aes(x = x, y = predicted)) +
